@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+# local secrets
+serviceAccountKey.json
+*.env
+
+# runtime data
+data/review_logs.jsonl
+data/user_card_progress.json
+dist/
+build/

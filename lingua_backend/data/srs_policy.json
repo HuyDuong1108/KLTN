@@ -1,0 +1,4 @@
+{
+  "max_new_per_session": 20,
+  "max_review_per_session": 100
+}

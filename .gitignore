@@ -1,0 +1,23 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Flutter (mọi nơi trong repo)
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
+# Env files
+**/.env
+
+# Python venv/cache (mọi nơi)
+**/.venv/
+**/__pycache__/
+**/*.pyc
+
+# Backend runtime logs/progress (nếu bạn không muốn push)
+lingua_backend/data/review_logs.jsonl
+lingua_backend/data/user_card_progress.json
