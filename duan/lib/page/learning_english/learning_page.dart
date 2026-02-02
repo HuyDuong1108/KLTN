@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'listening/listening_page.dart';
 
 class LearningPage extends StatelessWidget {
   const LearningPage({super.key});
@@ -13,22 +14,15 @@ class LearningPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               // ===== HEADER =====
               const Text(
                 "Learning",
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               const Text(
                 "Improve your IELTS skills step by step",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF607D8B),
-                ),
+                style: TextStyle(fontSize: 14, color: Color(0xFF607D8B)),
               ),
 
               const SizedBox(height: 20),
@@ -53,17 +47,18 @@ class LearningPage extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.trending_up, color: Colors.white, size: 40),
+                    const Icon(
+                      Icons.trending_up,
+                      color: Colors.white,
+                      size: 40,
+                    ),
                     const SizedBox(width: 14),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
                           "Overall IELTS Band",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 14),
                         ),
                         SizedBox(height: 4),
                         Text(
@@ -181,7 +176,12 @@ class _SkillCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        // TODO: Navigate to skill detail page
+        if (title == "Listening") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ListeningPage()),
+          );
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -210,26 +210,17 @@ class _SkillCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
               "Band $band",
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             Text(
               lessons,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF607D8B),
-              ),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF607D8B)),
             ),
           ],
         ),

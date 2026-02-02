@@ -1,0 +1,230 @@
+import 'package:flutter/material.dart';
+
+class ListeningPage extends StatelessWidget {
+  const ListeningPage({super.key});
+
+  // ===== COLORS =====
+  static const Color primaryBlue = Color(0xFF1976D2);
+  static const Color lightBlue = Color(0xFF4FC3F7);
+  static const Color bgColor = Color(0xFFF6FAFF);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        title: const Text(
+          "Listening",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _overviewCard(),
+          const SizedBox(height: 28),
+          const Text(
+            "Full Listening Tests",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ===== DONE TEST =====
+          _listeningTestCard(
+            title: "IELTS Listening Test 1",
+            completed: true,
+            score: 28,
+            band: 6.5,
+          ),
+
+          // ===== NOT DONE =====
+          _listeningTestCard(
+            title: "IELTS Listening Test 2",
+            completed: false,
+          ),
+
+          _listeningTestCard(
+            title: "IELTS Listening Test 3",
+            completed: false,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= OVERVIEW CARD =================
+  Widget _overviewCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFBBDEFB), Color(0xFFE3F2FD)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.headphones, size: 40, color: primaryBlue),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                "Listening Progress",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text("Completed: 1 / 10"),
+              Text("Average Band: 6.5"),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= TEST CARD =================
+  Widget _listeningTestCard({
+    required String title,
+    required bool completed,
+    int? score,
+    double? band,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x334FC3F7),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ===== TITLE =====
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // ===== META =====
+          Row(
+            children: const [
+              Icon(Icons.layers, size: 18),
+              SizedBox(width: 6),
+              Text("4 Sections"),
+              SizedBox(width: 16),
+              Icon(Icons.help_outline, size: 18),
+              SizedBox(width: 6),
+              Text("40 Questions"),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // ===== STATE =====
+          if (completed) ...[
+            Row(
+              children: [
+                _infoChip("Score: $score/40"),
+                const SizedBox(width: 8),
+                _infoChip("Band: $band"),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _primaryButton(
+              text: "Review Test",
+              icon: Icons.analytics_outlined,
+              background: primaryBlue,
+              textColor: Colors.white,
+            ),
+          ] else ...[
+            const Text(
+              "Not attempted",
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 14),
+            _primaryButton(
+              text: "Start Test",
+              icon: Icons.play_arrow_rounded,
+              background: lightBlue,
+              textColor: Colors.white,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ================= COMPONENTS =================
+  Widget _infoChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F2FD),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          color: primaryBlue,
+        ),
+      ),
+    );
+  }
+
+  Widget _primaryButton({
+    required String text,
+    required IconData icon,
+    required Color background,
+    required Color textColor,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: () {},
+        icon: Icon(icon, size: 22, color: textColor),
+        label: Text(
+          text,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: background,
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+}
