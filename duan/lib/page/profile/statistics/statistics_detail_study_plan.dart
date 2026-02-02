@@ -5,7 +5,7 @@ extension _StatisticsDetailStudyPlan on _StatisticsDetailPageState {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.06),
+        color: Colors.blue.withOpacity(0.06),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -32,7 +32,7 @@ extension _StatisticsDetailStudyPlan on _StatisticsDetailPageState {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? Colors.orange : Colors.grey.withOpacity(0.12),
+          color: active ? Colors.blue : Colors.grey.withOpacity(0.12),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
@@ -110,7 +110,7 @@ extension _StatisticsDetailStudyPlan on _StatisticsDetailPageState {
               width: double.infinity,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
+                  backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -241,16 +241,16 @@ extension _StatisticsDetailStudyPlan on _StatisticsDetailPageState {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                (isToday ? Colors.orange.shade400 : Colors.orange.shade300)
+                                (isToday ? Colors.blue.shade400 : Colors.blue.shade300)
                                     .withOpacity(0.55),
-                                (isToday ? Colors.deepOrange.shade300 : Colors.deepOrange.shade200)
+                                (isToday ? Colors.blueAccent.shade200 : Colors.blueAccent.shade100)
                                     .withOpacity(0.35),
                               ],
                             ),
                             border: Border.all(
                               color: isToday
-                                  ? Colors.deepOrange.withOpacity(0.55)
-                                  : Colors.orange.withOpacity(0.30),
+                                  ? Colors.blueAccent.withOpacity(0.55)
+                                  : Colors.blue.withOpacity(0.30),
                               width: isToday ? 1.4 : 1.0,
                             ),
                           ),
@@ -264,7 +264,7 @@ extension _StatisticsDetailStudyPlan on _StatisticsDetailPageState {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.orange.withOpacity(0.35)),
+                              border: Border.all(color: Colors.blue.withOpacity(0.35)),
                             ),
                             child: Text(
                               '$c',
@@ -297,7 +297,7 @@ extension _StatisticsDetailStudyPlan on _StatisticsDetailPageState {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                            color: isToday ? Colors.deepOrange : Colors.grey.shade700,
+                            color: isToday ? Colors.blueAccent : Colors.grey.shade700,
                           ),
                         ),
                       ),
@@ -373,9 +373,9 @@ extension _StatisticsDetailStudyPlan on _StatisticsDetailPageState {
     Color cellColor(_HeatCell c) {
       if (!c.inRange) return Colors.grey.withOpacity(0.06);
       if (c.count <= 0) return Colors.grey.withOpacity(0.10);
-      if (maxCount <= 0) return Colors.orange.withOpacity(0.20);
+      if (maxCount <= 0) return Colors.blue.withOpacity(0.20);
       final t = (c.count / maxCount).clamp(0.0, 1.0);
-      return Colors.orange.withOpacity(0.18 + 0.60 * t);
+      return Colors.blue.withOpacity(0.18 + 0.60 * t);
     }
 
     void openCellDialog(_HeatCell c) {
@@ -418,14 +418,14 @@ extension _StatisticsDetailStudyPlan on _StatisticsDetailPageState {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isToday
-                        ? Colors.deepOrange
-                        : Colors.orange.withOpacity(cell.inRange ? 0.18 : 0.10),
+                        ? Colors.blueAccent
+                        : Colors.blue.withOpacity(cell.inRange ? 0.18 : 0.10),
                     width: isToday ? 2.0 : 1.0,
                   ),
                   boxShadow: isToday
                       ? [
                           BoxShadow(
-                            color: Colors.deepOrange.withOpacity(0.18),
+                            color: Colors.blueAccent.withOpacity(0.18),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           )
@@ -438,7 +438,7 @@ extension _StatisticsDetailStudyPlan on _StatisticsDetailPageState {
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
                     color: cell.inRange
-                        ? (cell.count == 0 ? Colors.grey.shade600 : Colors.deepOrange.shade700)
+                        ? (cell.count == 0 ? Colors.grey.shade600 : Colors.blueAccent.shade700)
                         : Colors.grey.shade500,
                   ),
                 ),

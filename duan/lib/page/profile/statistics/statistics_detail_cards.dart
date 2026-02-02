@@ -14,13 +14,13 @@ extension _StatisticsDetailCards on _StatisticsDetailPageState {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.orange.shade700,
-            Colors.deepOrange.shade400,
+            Colors.blue.shade700,
+            Colors.blue.shade400,
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.25),
+            color: Colors.blue.withOpacity(0.25),
             blurRadius: 12,
             offset: const Offset(0, 6),
           )
@@ -132,7 +132,7 @@ extension _StatisticsDetailCards on _StatisticsDetailPageState {
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(0, 0),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          foregroundColor: Colors.orange,
+                          foregroundColor: Colors.blue,
                         ),
                         onPressed: () => _openCoachDetails(coach),
                         child: const Text(
@@ -196,7 +196,7 @@ extension _StatisticsDetailCards on _StatisticsDetailPageState {
                               alignment: Alignment.centerRight,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
+                                  backgroundColor: Colors.blue,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -262,7 +262,7 @@ Widget _coachLine({
   return Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Icon(icon, size: 18, color: iconColor ?? Colors.orange),
+      Icon(icon, size: 18, color: iconColor ?? Colors.blue),
       const SizedBox(width: 8),
       Expanded(
         child: Column(
@@ -312,9 +312,9 @@ void _openCoachDetails(AiCoachResponse coach) {
       child: Container(
         width: 44,
         height: 44,
-        color: Colors.orange.withOpacity(0.12),
+        color: Colors.blue.withOpacity(0.12),
         alignment: Alignment.center,
-        child: const Icon(Icons.school, color: Colors.orange),
+        child: const Icon(Icons.school, color: Colors.blue),
       ),
     );
   }
@@ -379,12 +379,12 @@ void _openCoachDetails(AiCoachResponse coach) {
         margin: const EdgeInsets.symmetric(horizontal: 6),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.06),
+          color: Colors.blue.withOpacity(0.06),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           children: [
-            Icon(icon, color: Colors.orange, size: 26),
+            Icon(icon, color: Colors.blue, size: 26),
             const SizedBox(height: 6),
             Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 2),
@@ -408,7 +408,7 @@ void _openCoachDetails(AiCoachResponse coach) {
       indicatorPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
 
       indicator: BoxDecoration(
-        color: Colors.orange,
+        color: Colors.blue,
         borderRadius: BorderRadius.circular(14),
       ),
 

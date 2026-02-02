@@ -127,7 +127,7 @@ class _StatisticsDetailPageState extends State<StatisticsDetailPage>
                   subtitle: Text(scope == 'now'
                       ? 'Tất cả thẻ đã tới hạn (<= hiện tại)'
                       : 'Tất cả thẻ đến hạn trong hôm nay'),
-                  leading: const Icon(Icons.play_circle_fill, color: Colors.orange),
+                  leading: const Icon(Icons.play_circle_fill, color: Colors.blue),
                   onTap: () => Navigator.pop(c, 'all'),
                 ),
                 ListTile(
@@ -390,8 +390,8 @@ class _StatisticsDetailPageState extends State<StatisticsDetailPage>
                                 child: OutlinedButton(
                                   onPressed: () => setS(() => temp = {'all'}),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.orange,
-                                    side: BorderSide(color: Colors.orange.withOpacity(0.6)),
+                                    foregroundColor: Colors.blue,
+                                    side: BorderSide(color: Colors.blue.withOpacity(0.6)),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                   child: const Text('Đặt lại'),
@@ -402,7 +402,7 @@ class _StatisticsDetailPageState extends State<StatisticsDetailPage>
                                 child: ElevatedButton(
                                   onPressed: () => Navigator.pop(c, temp.isEmpty ? {'all'} : temp),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
+                                    backgroundColor: Colors.blue,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                   child: const Text(
@@ -487,7 +487,7 @@ class _StatisticsDetailPageState extends State<StatisticsDetailPage>
                                     onTap: () => setS(() => temp = k),
                                     leading: Icon(
                                       selected ? Icons.check_circle : Icons.circle_outlined,
-                                      color: selected ? Colors.orange : Colors.black26,
+                                      color: selected ? Colors.blue : Colors.black26,
                                     ),
                                     title: Text(t, style: const TextStyle(fontWeight: FontWeight.w600)),
                                   );
@@ -502,7 +502,7 @@ class _StatisticsDetailPageState extends State<StatisticsDetailPage>
                               child: ElevatedButton(
                                 onPressed: () => Navigator.pop(c, temp),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
+                                  backgroundColor: Colors.blue,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                                 child: const Text(
@@ -675,7 +675,7 @@ class _StatisticsDetailPageState extends State<StatisticsDetailPage>
                             Color badgeColor(DateTime dueLocal) {
                               final diffMin = dueLocal.difference(nowLocal).inMinutes;
                               if (diffMin <= 0) {
-                                if (isJustDue(dueLocal)) return Colors.orange.withOpacity(0.95);
+                                if (isJustDue(dueLocal)) return Colors.blue.withOpacity(0.95);
                                 if (isOverdueLong(dueLocal)) return Colors.red.withOpacity(0.9);
                                 return Colors.red.withOpacity(0.85);
                               }
@@ -903,7 +903,7 @@ class _StatisticsDetailPageState extends State<StatisticsDetailPage>
                                                               padding: const EdgeInsets.only(top: 6),
                                                               child: Text(
                                                                 '+ ${it.matches.length - 1} vị trí khác',
-                                                                style: const TextStyle(color: Colors.orange),
+                                                                style: const TextStyle(color: Colors.blue),
                                                               ),
                                                             ),
                                                         ],
@@ -949,7 +949,7 @@ class _StatisticsDetailPageState extends State<StatisticsDetailPage>
                                                 child: Icon(
                                                   Icons.keyboard_arrow_up,
                                                   size: 26,
-                                                  color: Colors.orange,
+                                                  color: Colors.blue,
                                                 ),
                                               ),
                                             ),
@@ -1034,7 +1034,7 @@ class _StatisticsDetailPageState extends State<StatisticsDetailPage>
               ),
               const SizedBox(height: 12),
               ListTile(
-                leading: const Icon(Icons.play_circle_fill, color: Colors.orange),
+                leading: const Icon(Icons.play_circle_fill, color: Colors.blue),
                 title: const Text('Ôn tất cả thẻ đến hạn', style: TextStyle(fontWeight: FontWeight.w800)),
                 onTap: () => Navigator.pop(c, DueReviewMode.all),
               ),
@@ -1090,7 +1090,7 @@ Future<void> _startDueReviewSession({
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Colors.orange,
+        backgroundColor: Colors.blue,
         foregroundColor: Colors.black,
         elevation: 0,
         title: const Text('Statistics',

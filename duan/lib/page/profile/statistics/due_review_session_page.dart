@@ -504,7 +504,7 @@ class _DueReviewSessionPageState extends State<DueReviewSessionPage> {
     if (_loading) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.orange.shade400,
+          backgroundColor: Colors.blue.shade400,
           foregroundColor: Colors.black,
           title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
@@ -515,7 +515,7 @@ class _DueReviewSessionPageState extends State<DueReviewSessionPage> {
     if (_error != null) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.orange.shade400,
+          backgroundColor: Colors.blue.shade400,
           foregroundColor: Colors.black,
           title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
@@ -529,7 +529,7 @@ class _DueReviewSessionPageState extends State<DueReviewSessionPage> {
                 const SizedBox(height: 12),
                 ElevatedButton(
                   onPressed: _load,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
                   child: const Text('Tải lại', style: TextStyle(color: Colors.white)),
                 ),
               ],
@@ -550,7 +550,7 @@ class _DueReviewSessionPageState extends State<DueReviewSessionPage> {
         },
         child: Scaffold(
           appBar: AppBar(
-            backgroundColor: Colors.orange.shade400,
+            backgroundColor: Colors.blue.shade400,
             foregroundColor: Colors.black,
             title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
@@ -578,7 +578,7 @@ class _DueReviewSessionPageState extends State<DueReviewSessionPage> {
         backgroundColor: Colors.grey.shade100,
         appBar: AppBar(
           title: Text(widget.title, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          backgroundColor: Colors.orange.shade400,
+          backgroundColor: Colors.blue.shade400,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.black),
           actions: [
@@ -662,7 +662,7 @@ class _DueReviewSessionPageState extends State<DueReviewSessionPage> {
                                 ),
                                 const Spacer(),
                                 IconButton(
-                                  icon: Icon(Icons.volume_up_rounded, size: 26, color: Colors.orange.shade400),
+                                  icon: Icon(Icons.volume_up_rounded, size: 26, color: Colors.blue.shade400),
                                   onPressed: _speakCurrent,
                                 ),
                               ],
@@ -712,7 +712,7 @@ class _DueReviewSessionPageState extends State<DueReviewSessionPage> {
                         child: ElevatedButton(
                           onPressed: () => setState(() => _showMeaning = !_showMeaning),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange.shade400,
+                            backgroundColor: Colors.blue.shade400,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                             elevation: 0,
