@@ -279,7 +279,7 @@ Ví dụ hợp lệ:
               .doc(widget.set.id);
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Color(0xFFF3F9FF),
       appBar: AppBar(
         backgroundColor: Colors.blue.shade400,
         title: Text(
@@ -1143,7 +1143,7 @@ Format JSON bắt buộc:
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Color(0xFFF3F9FF),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1348,7 +1348,7 @@ Format JSON bắt buộc:
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Color(0xFFF3F9FF),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

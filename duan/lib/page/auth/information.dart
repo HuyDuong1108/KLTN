@@ -50,7 +50,7 @@ class _UserInfoPageState extends State<UserInfoPage> {
         height: size.height,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFFDE3A7), Color(0xFFD6EAF8)],
+            colors: [Color(0xFFE1F5FE), Color(0xFFFFFFFF)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -61,67 +61,148 @@ class _UserInfoPageState extends State<UserInfoPage> {
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
               child: Column(
                 children: [
-                  Image.asset("lib/image/logo.png", width: 100, height: 100),
+                  Image.asset("lib/image/logo.png", width: 200, height: 200),
                   const SizedBox(height: 25),
                   const Text(
                     "Complete Your Profile",
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: Color(0xFF1565C0),
                     ),
                   ),
                   const SizedBox(height: 30),
-
-                  // Full Name
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.person_outline),
-                      hintText: "Full Name",
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
+                  Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x334FC3F7),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: // Full Name
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(
+                          Icons.person_outline,
+                          color: Color(0xFF4FC3F7),
+                        ),
+                        hintText: "Full Name",
+                        filled: true,
+                        fillColor: Colors.white,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB3E5FC), // xanh nhạt
+                            width: 1.2,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF4FC3F7), // xanh cá heo
+                            width: 2,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 18),
-
-                  // Birthdate
-                  TextField(
-                    controller: birthController,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.calendar_today_outlined),
-                      hintText: "Birthdate (dd/mm/yyyy)",
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
+                  Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x334FC3F7),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: // Birthdate
+                    TextField(
+                      controller: birthController,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(
+                          Icons.calendar_today_outlined,
+                          color: Color(0xFF4FC3F7),
+                        ),
+                        hintText: "Birthdate (dd/mm/yyyy)",
+                        filled: true,
+                        fillColor: Colors.white,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB3E5FC), // xanh nhạt
+                            width: 1.2,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF4FC3F7), // xanh cá heo
+                            width: 2,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 18),
 
                   // Gender
+                  // Gender
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x334FC3F7), // shadow xanh nhạt
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: DropdownButtonFormField<String>(
                       value: gender,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
                           vertical: 14,
-                        ), // canh giữa chữ
+                        ),
+
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB3E5FC),
+                            width: 1.2,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF4FC3F7),
+                            width: 2,
+                          ),
+                        ),
                       ),
-                      icon: const Icon(Icons.arrow_drop_down),
+                      icon: const Icon(
+                        Icons.arrow_drop_down,
+                        color: Color(0xFF4FC3F7),
+                      ),
                       items: ["Male", "Female", "Other"]
                           .map(
                             (e) => DropdownMenuItem(
@@ -130,7 +211,7 @@ class _UserInfoPageState extends State<UserInfoPage> {
                                 children: [
                                   const Icon(
                                     Icons.wc_outlined,
-                                    color: Colors.grey,
+                                    color: Color(0xFF4FC3F7),
                                   ),
                                   const SizedBox(width: 10),
                                   Text(e),
@@ -152,7 +233,7 @@ class _UserInfoPageState extends State<UserInfoPage> {
                     child: ElevatedButton(
                       onPressed: loading ? null : saveInfo,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: Color(0xFF4FC3F7), // xanh cá heo
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),

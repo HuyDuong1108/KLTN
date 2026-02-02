@@ -33,7 +33,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Color(0xFFF3F9FF),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: FutureBuilder<StatsSummary>(
@@ -56,8 +56,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   _achievements(),
                   const SizedBox(height: 20),
                   _languages(),
-                  const SizedBox(height: 20),
-                  _settings(),
                   const SizedBox(height: 20),
                   _logoutButton(context),
                 ],
@@ -119,7 +117,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   height: 32,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Colors.blue,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -198,7 +196,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _statItem(IconData icon, String value) {
     return Column(
       children: [
-        Icon(icon, color: Colors.orange, size: 28),
+        Icon(icon, color: Colors.blue, size: 28),
         const SizedBox(height: 4),
         Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
@@ -303,7 +301,7 @@ class _ProfilePageState extends State<ProfilePage> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.12),
+            color: Colors.blue.withOpacity(0.12),
             blurRadius: 12,
             offset: const Offset(0, 4),
           )
@@ -341,61 +339,40 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   // ----------------------------------------------------------
-  // ⚙️ SETTINGS
-  // ----------------------------------------------------------
-  Widget _settings() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: _boxDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Settings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          _settingItem(Icons.notifications, "Notifications"),
-          _settingItem(Icons.access_time, "Reminders"),
-          _settingItem(Icons.person, "Account"),
-          _settingItem(Icons.privacy_tip, "Privacy"),
-          _settingItem(Icons.help, "Help"),
-          _settingItem(Icons.info, "About"),
-        ],
-      ),
-    );
-  }
-
-  Widget _settingItem(IconData icon, String text) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Colors.orange),
-      title: Text(text, style: const TextStyle(fontSize: 16)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-    );
-  }
-
-  // ----------------------------------------------------------
-  // 🚪 LOGOUT BUTTON
+  // LOGOUT BUTTON
   // ----------------------------------------------------------
   Widget _logoutButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Colors.orange),
-          foregroundColor: Colors.orange,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-        onPressed: () async {
-          await FirebaseAuth.instance.signOut();
-          Navigator.pop(context);
-        },
-        child: const Text(
-          "Log Out",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  return SizedBox(
+    width: double.infinity,
+    height: 52,
+    child: OutlinedButton.icon(
+      icon: const Icon(Icons.logout_rounded),
+      label: const Text(
+        "Log Out",
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
         ),
       ),
-    );
-  }
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFFD32F2F), // đỏ dịu
+        side: const BorderSide(
+          color: Color(0xFFEF9A9A), // viền đỏ nhạt
+          width: 1.5,
+        ),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      onPressed: () async {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pop(context);
+      },
+    ),
+  );
+}
+
 
   // ----------------------------------------------------------
   // DECORATION
