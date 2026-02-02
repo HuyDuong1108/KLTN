@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       body: SizedBox.expand(
         child: Image.asset(
-          'lib/image/Splash_Screen.jpg',
+          'lib/image/Splash_Screen.png',
           fit: BoxFit.cover, // cho full màn hình
         ),
       ),
