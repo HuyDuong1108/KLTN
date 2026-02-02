@@ -33,7 +33,7 @@ class _MainPageState extends State<MainPage> {
         backgroundColor: Colors.blue.shade400,
         title: Text(
           ["Home", "Learning", "Flashcard", "Profile"][_currentIndex],
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         
       ),

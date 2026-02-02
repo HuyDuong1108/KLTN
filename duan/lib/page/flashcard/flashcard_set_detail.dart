@@ -281,7 +281,7 @@ Ví dụ hợp lệ:
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Colors.orange.shade400,
+        backgroundColor: Colors.blue.shade400,
         title: Text(
           widget.set.title,
           style: const TextStyle(
@@ -293,7 +293,7 @@ Ví dụ hợp lệ:
       ),
       floatingActionButton: widget.isPersonal
           ? FloatingActionButton(
-              backgroundColor: Colors.orange,
+              backgroundColor: const Color(0xFF42A5F5),
               onPressed: () => showAddVocabularySheet(context, userId: userId),
               child: const Icon(Icons.add, color: Colors.white),
             )
@@ -697,7 +697,7 @@ Format JSON bắt buộc:
                           p: const TextStyle(fontSize: 15),
                           strong: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Colors.orange,
+                            color: Colors.blue,
                           ),
                         ),
                       ),
@@ -773,10 +773,10 @@ Format JSON bắt buộc:
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isHighlight ? Colors.orange.shade50 : Colors.white,
+        color: isHighlight ? Colors.blue.shade50 : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isHighlight ? Colors.orange.shade300 : Colors.transparent,
+          color: isHighlight ? Colors.blue.shade300 : Colors.transparent,
           width: isHighlight ? 2.0 : 0.0,
         ),
         boxShadow: const [
@@ -846,7 +846,7 @@ Format JSON bắt buộc:
             children: [
               const SizedBox(height: 12),
               ListTile(
-                leading: const Icon(Icons.edit, color: Colors.orangeAccent),
+                leading: const Icon(Icons.edit, color: Colors.blueAccent),
                 title: const Text("Chỉnh sửa"),
                 onTap: () {
                   Navigator.pop(context);
@@ -855,7 +855,7 @@ Format JSON bắt buộc:
               ),
 
               ListTile(
-                leading: const Icon(Icons.delete, color: Colors.orangeAccent),
+                leading: const Icon(Icons.delete, color: Colors.blueAccent),
                 title: const Text("Xóa"),
                 onTap: () {
                   Navigator.pop(context);
@@ -931,9 +931,9 @@ Format JSON bắt buộc:
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.orange.shade50,
+          color: Colors.blue.shade50,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.orange.shade200, width: 1.2),
+          border: Border.all(color: Colors.blue.shade200, width: 1.2),
         ),
         child: Text(emoji, style: const TextStyle(fontSize: 12)),
       ),
@@ -990,7 +990,7 @@ Format JSON bắt buộc:
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
+                        color: Colors.blue.shade50,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -1034,9 +1034,9 @@ Format JSON bắt buộc:
                                   ? null
                                   : () => Navigator.pop(dialogCtx),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.orange.shade700,
+                                foregroundColor: Colors.blue.shade700,
                                 side: BorderSide(
-                                  color: Colors.orange.shade300,
+                                  color: Colors.blue.shade300,
                                   width: 1.2,
                                 ),
                                 shape: RoundedRectangleBorder(
@@ -1070,11 +1070,11 @@ Format JSON bắt buộc:
                                             content: Text(
                                               'Đã xóa "${vocab.word}"',
                                               style: TextStyle(
-                                                color: Colors.orange.shade800,
+                                                color: Colors.blue.shade800,
                                                 fontWeight: FontWeight.w700,
                                               ),
                                             ),
-                                            backgroundColor: Colors.orange.shade50,
+                                            backgroundColor: Colors.blue.shade50,
                                             behavior: SnackBarBehavior.floating,
                                             margin: const EdgeInsets.all(16),
                                           ),
@@ -1181,7 +1181,7 @@ Format JSON bắt buộc:
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                          color: Colors.orange.shade200,
+                          color: Colors.blue.shade200,
                           width: 2,
                         ),
                       ),
@@ -1213,7 +1213,7 @@ Format JSON bắt buộc:
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                          color: Colors.orange.shade200,
+                          color: Colors.blue.shade200,
                           width: 2,
                         ),
                       ),
@@ -1237,7 +1237,7 @@ Format JSON bắt buộc:
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                          color: Colors.orange.shade200,
+                          color: Colors.blue.shade200,
                           width: 2,
                         ),
                       ),
@@ -1306,7 +1306,7 @@ Format JSON bắt buộc:
                               Navigator.pop(context);
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: Colors.blue,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -1393,7 +1393,7 @@ Format JSON bắt buộc:
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                          color: Colors.orange.shade200,
+                          color: Colors.blue.shade200,
                           width: 2,
                         ),
                       ),
@@ -1435,7 +1435,7 @@ Format JSON bắt buộc:
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                          color: Colors.orange.shade200,
+                          color: Colors.blue.shade200,
                           width: 2,
                         ),
                       ),
@@ -1456,7 +1456,7 @@ Format JSON bắt buộc:
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                          color: Colors.orange.shade200,
+                          color: Colors.blue.shade200,
                           width: 2,
                         ),
                       ),
@@ -1494,7 +1494,7 @@ Format JSON bắt buộc:
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: isSelected
-                                    ? Colors.orange
+                                    ? Colors.blue
                                     : Colors.transparent,
                                 width: 3,
                               ),
@@ -1564,9 +1564,9 @@ Format JSON bắt buộc:
                                   SnackBar(
                                     content: const Text(
                                       "Thêm từ thành công!",
-                                      style: TextStyle(color: Colors.orange),
+                                      style: TextStyle(color: Colors.blue),
                                     ),
-                                    backgroundColor: Colors.orange.shade100,
+                                    backgroundColor: Colors.blue.shade100,
                                     behavior: SnackBarBehavior.floating,
                                     margin: const EdgeInsets.all(16),
                                   ),
@@ -1584,7 +1584,7 @@ Format JSON bắt buộc:
                             },
 
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: Colors.blue,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),

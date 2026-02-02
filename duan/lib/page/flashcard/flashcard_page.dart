@@ -18,13 +18,10 @@ class FlashcardPage extends StatefulWidget {
 }
 
 class _LastReviewIndex {
-  final Map<String, DateTime> bySetKey;    // p::<setId> | c::<setId>
+  final Map<String, DateTime> bySetKey; // p::<setId> | c::<setId>
   final Map<String, DateTime> byTitleNorm; // normalized title
 
-  const _LastReviewIndex({
-    required this.bySetKey,
-    required this.byTitleNorm,
-  });
+  const _LastReviewIndex({required this.bySetKey, required this.byTitleNorm});
 
   static const empty = _LastReviewIndex(bySetKey: {}, byTitleNorm: {});
 }
@@ -49,7 +46,11 @@ class _FlashcardPageState extends State<FlashcardPage>
     if (match == null) return null;
 
     if (match is Map) {
-      final v = match['setId'] ?? match['set_id'] ?? match['setDocId'] ?? match['set_doc_id'];
+      final v =
+          match['setId'] ??
+          match['set_id'] ??
+          match['setDocId'] ??
+          match['set_doc_id'];
       if (v is String && v.trim().isNotEmpty) return v.trim();
       return null;
     }
@@ -71,7 +72,8 @@ class _FlashcardPageState extends State<FlashcardPage>
     if (match == null) return null;
 
     if (match is Map) {
-      final v = match['isPersonal'] ?? match['is_personal'] ?? match['personal'];
+      final v =
+          match['isPersonal'] ?? match['is_personal'] ?? match['personal'];
       if (v is bool) return v;
       if (v is int) return v != 0;
       if (v is String) {
@@ -155,11 +157,11 @@ class _FlashcardPageState extends State<FlashcardPage>
   }
 
   Widget _buildLastReviewLabel({
-  required _LastReviewIndex idx,
-  required String setId,
-  required bool isPersonal,
-  required String setTitle,
-}) {
+    required _LastReviewIndex idx,
+    required String setId,
+    required bool isPersonal,
+    required String setTitle,
+  }) {
     DateTime? statsDt;
 
     final key = _setKey(setId: setId, isPersonal: isPersonal);
@@ -208,7 +210,6 @@ class _FlashcardPageState extends State<FlashcardPage>
     );
   }
 
-
   void _refreshLastReviewIndex() {
     _lastReviewIndexFuture = _loadLastReviewIndexFromStats();
     _lastAnyModeFutureBySetKey.clear();
@@ -232,7 +233,6 @@ class _FlashcardPageState extends State<FlashcardPage>
     });
   }
 
-
   @override
   void dispose() {
     _tabController.dispose();
@@ -243,11 +243,11 @@ class _FlashcardPageState extends State<FlashcardPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF3F9FF),
       floatingActionButton: isOffline
           ? null
           : FloatingActionButton(
-              backgroundColor: Colors.orange,
+              backgroundColor: const Color(0xFF42A5F5),
               onPressed: () => showAddFlashcardSheet(context),
               child: const Icon(Icons.add, color: Colors.white),
             ),
@@ -259,7 +259,7 @@ class _FlashcardPageState extends State<FlashcardPage>
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(8),
-              color: Colors.orange.shade100,
+              color: Colors.blue.shade100,
               child: const Text(
                 "Bạn đang offline dữ liệu sẽ đồng bộ khi có mạng",
                 textAlign: TextAlign.center,
@@ -272,9 +272,9 @@ class _FlashcardPageState extends State<FlashcardPage>
             color: Colors.white,
             child: TabBar(
               controller: _tabController,
-              labelColor: const Color(0xFFFF8F00),
+              labelColor: const Color(0xFF42A5F5),
               unselectedLabelColor: const Color(0xFFB0BEC5),
-              indicatorColor: const Color(0xFFFF8F00),
+              indicatorColor: const Color(0xFF42A5F5),
               labelStyle: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -310,8 +310,6 @@ class _FlashcardPageState extends State<FlashcardPage>
   // final Map<String, Future<String>> _lastReviewLabelCache = {};
   // final Map<String, Future<Map<String, DateTime>>> _lastReviewMapCache = {};
 
-
-
   String _cacheKey({required String setId, required bool isPersonal}) {
     return '${isPersonal ? 'p' : 'c'}::$setId';
   }
@@ -324,7 +322,8 @@ class _FlashcardPageState extends State<FlashcardPage>
     final now = DateTime.now();
     final local = dt.toLocal();
 
-    final sameDay = now.year == local.year &&
+    final sameDay =
+        now.year == local.year &&
         now.month == local.month &&
         now.day == local.day;
 
@@ -353,6 +352,7 @@ class _FlashcardPageState extends State<FlashcardPage>
     final y = years < 1 ? 1 : years;
     return '$y năm trước';
   }
+
   final Map<String, Future<DateTime?>> _lastAnyModeFutureBySetKey = {};
   Future<Map<String, DateTime>> _loadLastReviewMapFromStats() async {
     try {
@@ -387,10 +387,6 @@ class _FlashcardPageState extends State<FlashcardPage>
   //   final key = isPersonal ? 'p' : 'c';
   //   return _lastReviewMapCache.putIfAbsent(key, () => _loadLastReviewMapFromStats());
   // }
-
-  
-
-
 
   // ================== TAB CỘNG ĐỒNG ==================
   Widget _buildCommunityFlashcards() {
@@ -431,10 +427,13 @@ class _FlashcardPageState extends State<FlashcardPage>
           future: _lastReviewIndexFuture,
           builder: (context, snap) {
             final idx = snap.data ?? _LastReviewIndex.empty;
-            return _buildFlashcardList(communitySets, isPersonal: false, idx: idx);
+            return _buildFlashcardList(
+              communitySets,
+              isPersonal: false,
+              idx: idx,
+            );
           },
         );
-
       },
     );
   }
@@ -485,7 +484,6 @@ class _FlashcardPageState extends State<FlashcardPage>
             return _buildFlashcardList(userSets, isPersonal: true, idx: idx);
           },
         );
-
       },
     );
   }
@@ -507,7 +505,7 @@ class _FlashcardPageState extends State<FlashcardPage>
 
               // SỬA
               ListTile(
-                leading: const Icon(Icons.edit, color: Colors.orangeAccent),
+                leading: const Icon(Icons.edit, color: Colors.blueAccent),
                 title: const Text("Chỉnh sửa"),
                 onTap: () {
                   Navigator.pop(context);
@@ -517,7 +515,7 @@ class _FlashcardPageState extends State<FlashcardPage>
 
               // XÓA
               ListTile(
-                leading: const Icon(Icons.delete, color: Colors.orangeAccent),
+                leading: const Icon(Icons.delete, color: Colors.blueAccent),
                 title: const Text("Xóa"),
                 onTap: () {
                   Navigator.pop(context);
@@ -585,7 +583,7 @@ class _FlashcardPageState extends State<FlashcardPage>
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: Colors.orange.shade200,
+                      color: Colors.blue.shade200,
                       width: 2,
                     ),
                   ),
@@ -612,7 +610,7 @@ class _FlashcardPageState extends State<FlashcardPage>
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: Colors.orange.shade200,
+                      color: Colors.blue.shade200,
                       width: 2,
                     ),
                   ),
@@ -626,7 +624,7 @@ class _FlashcardPageState extends State<FlashcardPage>
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: Colors.blue,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -663,130 +661,137 @@ class _FlashcardPageState extends State<FlashcardPage>
 
   // ================== HIỂN THỊ LIST ==================
   Widget _buildFlashcardList(
-  List<FlashcardSet> sets, {
-  required bool isPersonal,
-  required _LastReviewIndex idx,
-}) {
-  if (sets.isEmpty) {
-    return const Center(child: Text("Không có dữ liệu"));
-  }
+    List<FlashcardSet> sets, {
+    required bool isPersonal,
+    required _LastReviewIndex idx,
+  }) {
+    if (sets.isEmpty) {
+      return const Center(child: Text("Không có dữ liệu"));
+    }
 
-  return ListView.builder(
-    padding: const EdgeInsets.all(16),
-    itemCount: sets.length,
-    itemBuilder: (context, index) {
-      final set = sets[index];
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: sets.length,
+      itemBuilder: (context, index) {
+        final set = sets[index];
 
-      return Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.orange.shade200.withOpacity(0.4),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => FlashcardSetDetailPage(
-                  set: set,
-                  isPersonal: isPersonal,
-                ),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.shade200.withOpacity(0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-            ).then((_) {
-              if (!mounted) return;
-              setState(_refreshLastReviewIndex);
-            });
-          },
-          onLongPress: isPersonal ? () => _showFlashcardActions(context, set) : null,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade100,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.menu_book_rounded,
-                        color: Colors.orange,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            set.title,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            set.description,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(Icons.list_alt, size: 18, color: Colors.orange.shade700),
-                              const SizedBox(width: 6),
-                              Text("${set.vocabList.length} từ"),
-                              const SizedBox(width: 16),
-                              Icon(Icons.group, size: 18, color: Colors.blue.shade600),
-                              const SizedBox(width: 6),
-                              Text("${set.participants} người"),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 18,
-                      color: Colors.orange,
-                    ),
-                  ],
+            ],
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      FlashcardSetDetailPage(set: set, isPersonal: isPersonal),
                 ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _buildLastReviewLabel(
-                    idx: idx,
-                    setId: set.id,
-                    isPersonal: isPersonal,
-                    setTitle: set.title,
+              ).then((_) {
+                if (!mounted) return;
+                setState(_refreshLastReviewIndex);
+              });
+            },
+            onLongPress: isPersonal
+                ? () => _showFlashcardActions(context, set)
+                : null,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.menu_book_rounded,
+                          color: Colors.blue,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              set.title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              set.description,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.list_alt,
+                                  size: 18,
+                                  color: Colors.blue.shade700,
+                                ),
+                                const SizedBox(width: 6),
+                                Text("${set.vocabList.length} từ"),
+                                const SizedBox(width: 16),
+                                Icon(
+                                  Icons.group,
+                                  size: 18,
+                                  color: Colors.blue.shade600,
+                                ),
+                                const SizedBox(width: 6),
+                                Text("${set.participants} người"),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 18,
+                        color: Colors.blue,
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: _buildLastReviewLabel(
+                      idx: idx,
+                      setId: set.id,
+                      isPersonal: isPersonal,
+                      setTitle: set.title,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
-
+        );
+      },
+    );
+  }
 
   void _confirmDelete(BuildContext context, FlashcardSet set) {
     final userId = FirebaseAuth.instance.currentUser!.uid;
@@ -823,7 +828,7 @@ class _FlashcardPageState extends State<FlashcardPage>
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
+                        color: Colors.blue.shade50,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -870,9 +875,9 @@ class _FlashcardPageState extends State<FlashcardPage>
                                   ? null
                                   : () => Navigator.pop(dialogCtx),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.orange.shade700,
+                                foregroundColor: Colors.blue.shade700,
                                 side: BorderSide(
-                                  color: Colors.orange.shade300,
+                                  color: Colors.blue.shade300,
                                   width: 1.2,
                                 ),
                                 shape: RoundedRectangleBorder(
@@ -1021,7 +1026,7 @@ class _FlashcardPageState extends State<FlashcardPage>
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                          color: Colors.orange.shade200,
+                          color: Colors.blue.shade200,
                           width: 2,
                         ),
                       ),
@@ -1049,7 +1054,7 @@ class _FlashcardPageState extends State<FlashcardPage>
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                          color: Colors.orange.shade200,
+                          color: Colors.blue.shade200,
                           width: 2,
                         ),
                       ),
@@ -1092,9 +1097,9 @@ class _FlashcardPageState extends State<FlashcardPage>
                                   SnackBar(
                                     content: const Text(
                                       "Tạo flashcard thành công!",
-                                      style: TextStyle(color: Colors.orange),
+                                      style: TextStyle(color: Colors.blue),
                                     ),
-                                    backgroundColor: Colors.orange.shade100,
+                                    backgroundColor: Colors.blue.shade100,
                                     behavior: SnackBarBehavior.floating,
                                     margin: const EdgeInsets.all(16),
                                   ),
@@ -1108,7 +1113,7 @@ class _FlashcardPageState extends State<FlashcardPage>
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: Colors.blue,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),

@@ -167,7 +167,7 @@ class _FlashcardQuizPageState extends State<FlashcardQuizPage> {
     if (selectedAnswer == null) return Colors.white;
 
     if (option == selectedAnswer) {
-      if (!showResult) return Colors.orange.shade100;
+      if (!showResult) return Colors.blue.shade100;
 
       return option == correct
           ? Colors.green.shade300
@@ -212,7 +212,7 @@ class _FlashcardQuizPageState extends State<FlashcardQuizPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.orange,
+        backgroundColor: Colors.blue,
         title: const Text("Flashcard Quiz"),
         elevation: 0,
       ),
@@ -226,8 +226,8 @@ class _FlashcardQuizPageState extends State<FlashcardQuizPage> {
               child: LinearProgressIndicator(
                 value: (currentIndex + 1) / widget.vocabList.length,
                 minHeight: 8,
-                color: Colors.orange,
-                backgroundColor: Colors.orange.shade100,
+                color: Colors.blue,
+                backgroundColor: Colors.blue.shade100,
               ),
             ),
             const SizedBox(height: 20),
@@ -241,7 +241,7 @@ class _FlashcardQuizPageState extends State<FlashcardQuizPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.orange.shade200.withOpacity(0.3),
+                    color: Colors.blue.shade200.withOpacity(0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -283,7 +283,7 @@ class _FlashcardQuizPageState extends State<FlashcardQuizPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.orange.shade100.withOpacity(0.5),
+                          color: Colors.blue.shade100.withOpacity(0.5),
                           blurRadius: 6,
                           offset: const Offset(0, 3),
                         ),
