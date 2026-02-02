@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'homeaction/chatgemni.dart';
 import 'profile/statistics/statistics_detail_page.dart';
 
-
 // dữ liệu từ API
 import '../data/stats_api.dart';
 import '../models/stats_summary.dart';
@@ -38,6 +37,7 @@ class _HomePageContentState extends State<HomePageContent> {
       (m) => '${m[1]},',
     );
   }
+
   String _getGreetingName() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return "there";
@@ -83,7 +83,8 @@ class _HomePageContentState extends State<HomePageContent> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Color(0xFFF3F9FF),
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -103,7 +104,7 @@ class _HomePageContentState extends State<HomePageContent> {
                       const SizedBox(width: 10),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children:  [
+                        children: [
                           Text(
                             "Hi, ${_getGreetingName()}!",
                             style: TextStyle(
@@ -112,8 +113,11 @@ class _HomePageContentState extends State<HomePageContent> {
                             ),
                           ),
                           Text(
-                            "LinguaSquirrel",
-                            style: TextStyle(color: Colors.grey),
+                            "DolphSpeak",
+                            style: TextStyle(
+                              color: Color(0xFF1976D2),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
@@ -194,7 +198,9 @@ class _HomePageContentState extends State<HomePageContent> {
                                 const SizedBox(height: 6),
                                 Text(
                                   xpText,
-                                  style: const TextStyle(color: Colors.orange),
+                                  style: const TextStyle(
+                                    color: Color(0xFF1976D2),
+                                  ),
                                 ),
                               ],
                             ),
@@ -202,7 +208,7 @@ class _HomePageContentState extends State<HomePageContent> {
                           const Icon(
                             Icons.bar_chart,
                             size: 40,
-                            color: Colors.orange,
+                            color: Color(0xFF4FC3F7),
                           ),
                         ],
                       ),
@@ -221,10 +227,14 @@ class _HomePageContentState extends State<HomePageContent> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _quickPracticeButton(Icons.book, Colors.orange, () {}),
+                  _quickPracticeButton(
+                    Icons.book,
+                    const Color.fromARGB(255, 94, 177, 245),
+                    () {},
+                  ),
                   _quickPracticeButton(
                     Icons.question_answer,
-                    Colors.purple,
+                    const Color.fromARGB(255, 208, 93, 228), // tím AI
                     () {
                       Navigator.push(
                         context,
@@ -234,12 +244,16 @@ class _HomePageContentState extends State<HomePageContent> {
                       );
                     },
                   ),
-                  _quickPracticeButton(Icons.mic, Colors.green, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SpeakingPage()),
-                    );
-                  }),
+                  _quickPracticeButton(
+                    Icons.mic,
+                    const Color.fromARGB(255, 241, 62, 71), // xanh ngọc speaking
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SpeakingPage()),
+                      );
+                    },
+                  ),
                 ],
               ),
 
@@ -254,7 +268,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
                   _goalChip("Complete daily lesson", true),
-                  _goalChip("Review 10 flashcards", true, progress: "7/10"),
+                  _goalChip("Review 10 flashcards", true),
                   _goalChip("Practice speaking", false),
                 ],
               ),
@@ -331,14 +345,17 @@ class _goalChip extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: completed ? Colors.green.withOpacity(0.1) : Colors.grey[200],
+          color: completed
+              ? const Color.fromARGB(255, 132, 235, 137).withOpacity(0.2)
+              : const Color(0xFFECEFF1),
+
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
             Icon(
               completed ? Icons.check_circle : Icons.circle_outlined,
-              color: completed ? Colors.green : Colors.grey,
+              color: completed ? const Color.fromARGB(255, 82, 193, 87) : Colors.grey,
             ),
             const SizedBox(height: 6),
             Text(
@@ -386,7 +403,7 @@ class _pathCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             "$progress complete",
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+            style: const TextStyle(color: Color(0xFF607D8B), fontSize: 12),
           ),
         ],
       ),

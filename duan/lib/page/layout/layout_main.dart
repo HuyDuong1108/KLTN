@@ -30,7 +30,7 @@ class _MainPageState extends State<MainPage> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.orange.shade400,
+        backgroundColor: Colors.blue.shade400,
         title: Text(
           ["Home", "Learning", "Flashcard", "Profile"][_currentIndex],
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -43,7 +43,7 @@ class _MainPageState extends State<MainPage> {
         elevation: 8,
         currentIndex: _currentIndex,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.orange.shade400, // khi chọn -> cam
+        selectedItemColor: Colors.blue.shade400, // khi chọn -> xanh dương
         unselectedItemColor: Colors.grey, // chưa chọn -> xám
         showUnselectedLabels: true,
         onTap: (index) {
