@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'listening_test_page.dart';
+import 'listening_review_page.dart';
 
 class ListeningPage extends StatelessWidget {
   const ListeningPage({super.key});
@@ -20,7 +22,6 @@ class ListeningPage extends StatelessWidget {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.black,
         elevation: 0,
-        
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -29,15 +30,13 @@ class ListeningPage extends StatelessWidget {
           const SizedBox(height: 28),
           const Text(
             "Full Listening Tests",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
 
           // ===== DONE TEST =====
           _listeningTestCard(
+            context: context,
             title: "IELTS Listening Test 1",
             completed: true,
             score: 28,
@@ -45,15 +44,9 @@ class ListeningPage extends StatelessWidget {
           ),
 
           // ===== NOT DONE =====
-          _listeningTestCard(
-            title: "IELTS Listening Test 2",
-            completed: false,
-          ),
+          _listeningTestCard(context: context,title: "IELTS Listening Test 2", completed: false),
 
-          _listeningTestCard(
-            title: "IELTS Listening Test 3",
-            completed: false,
-          ),
+          _listeningTestCard(context: context,title: "IELTS Listening Test 3", completed: false),
         ],
       ),
     );
@@ -80,10 +73,7 @@ class ListeningPage extends StatelessWidget {
             children: const [
               Text(
                 "Listening Progress",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 6),
               Text("Completed: 1 / 10"),
@@ -97,6 +87,7 @@ class ListeningPage extends StatelessWidget {
 
   // ================= TEST CARD =================
   Widget _listeningTestCard({
+    required BuildContext context,
     required String title,
     required bool completed,
     int? score,
@@ -122,10 +113,7 @@ class ListeningPage extends StatelessWidget {
           // ===== TITLE =====
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 10),
@@ -160,18 +148,27 @@ class ListeningPage extends StatelessWidget {
               icon: Icons.analytics_outlined,
               background: primaryBlue,
               textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ListeningReviewPage()),
+                );
+              },
             ),
           ] else ...[
-            const Text(
-              "Not attempted",
-              style: TextStyle(color: Colors.grey),
-            ),
+            const Text("Not attempted", style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 14),
             _primaryButton(
               text: "Start Test",
               icon: Icons.play_arrow_rounded,
               background: lightBlue,
               textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ListeningTestPage()),
+                );
+              },
             ),
           ],
         ],
@@ -189,10 +186,7 @@ class ListeningPage extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          color: primaryBlue,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w600, color: primaryBlue),
       ),
     );
   }
@@ -202,12 +196,13 @@ class ListeningPage extends StatelessWidget {
     required IconData icon,
     required Color background,
     required Color textColor,
+    required VoidCallback onPressed,
   }) {
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: onPressed,
         icon: Icon(icon, size: 22, color: textColor),
         label: Text(
           text,
