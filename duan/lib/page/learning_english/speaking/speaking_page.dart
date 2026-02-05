@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'ielts_speaking_test_page.dart';
+import 'ai_speaking_partner_page.dart';
+import 'pronunciation_practice_page.dart';
 
 class SpeakingPage extends StatelessWidget {
   const SpeakingPage({super.key});
@@ -51,18 +53,34 @@ class SpeakingPage extends StatelessWidget {
             ),
           ),
 
-          _modeCard(
-            icon: Icons.chat_bubble_outline,
-            title: "AI Speaking Partner",
-            subtitle: "Practice speaking like a real conversation",
-            color: Colors.teal,
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AISpeakingPartnerPage()),
+              );
+            },
+            child: _modeCard(
+              icon: Icons.chat_bubble_outline,
+              title: "AI Speaking Partner",
+              subtitle: "Practice speaking like a real conversation",
+              color: Colors.teal,
+            ),
           ),
 
-          _modeCard(
-            icon: Icons.record_voice_over,
-            title: "Pronunciation Practice",
-            subtitle: "Improve pronunciation & intonation",
-            color: Colors.orange,
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PronunciationPracticePage()),
+              );
+            },
+            child: _modeCard(
+              icon: Icons.record_voice_over,
+              title: "Pronunciation Practice",
+              subtitle: "Improve pronunciation & intonation",
+              color: Colors.orange,
+            ),
           ),
 
           const SizedBox(height: 28),
