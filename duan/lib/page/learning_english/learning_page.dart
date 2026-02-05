@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'listening/listening_page.dart';
 import 'reading/reading_page.dart';
 import 'writing/writing_page.dart';
+import 'speaking/speaking_page.dart';
 
 class LearningPage extends StatelessWidget {
   const LearningPage({super.key});
@@ -194,6 +195,12 @@ class _SkillCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const WritingPage()),
+          );
+        }
+        else if (title == "Speaking") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SpeakingPage()),
           );
         }
       },
