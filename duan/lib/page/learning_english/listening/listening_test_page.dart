@@ -6,10 +6,7 @@ import 'listening_result_page.dart';
 class ListeningTestPage extends StatefulWidget {
   final String testId;
 
-  const ListeningTestPage({
-    super.key,
-    required this.testId,
-  });
+  const ListeningTestPage({super.key, required this.testId});
 
   @override
   State<ListeningTestPage> createState() => _ListeningTestPageState();
@@ -47,8 +44,8 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
     _testData = doc.data()!;
     final int duration =
         (_testData!['duration'] is int && _testData!['duration'] > 0)
-            ? _testData!['duration']
-            : 30;
+        ? _testData!['duration']
+        : 30;
 
     _startTimer(duration);
     setState(() {});
@@ -91,13 +88,31 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
   }
 
   // ================= AUTO SUBMIT =================
-  void _autoSubmit() {
+  Future<void> _autoSubmit() async {
+    final userAnswers = _collectUserAnswers();
+    final result = _calculateResult(userAnswers);
+
+    final docRef = FirebaseFirestore.instance
+        .collection('listening_results')
+        .doc();
+
+    await docRef.set({
+      "testId": widget.testId,
+      "submittedAt": FieldValue.serverTimestamp(),
+      "durationUsed": (_testData!['duration'] * 60) - _remainingSeconds,
+      "answers": userAnswers,
+      "correct": result['correct'],
+      "incorrect": result['incorrect'],
+      "band": result['band'],
+      "sectionScore": result['sectionScore'],
+    });
+
     if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => const ListeningResultPage(),
+        builder: (_) => ListeningResultPage(resultId: docRef.id),
       ),
     );
   }
@@ -106,9 +121,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
   @override
   Widget build(BuildContext context) {
     if (_testData == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final sections = _testData!['sections'] as List<dynamic>;
@@ -167,6 +180,72 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
     );
   }
 
+  Map<String, String> _collectUserAnswers() {
+    final Map<String, String> answers = {};
+
+    // input questions
+    for (final entry in _inputControllers.entries) {
+      answers[entry.key.toString()] = entry.value.text.trim();
+    }
+
+    // mcq questions
+    for (final entry in _mcqAnswers.entries) {
+      answers[entry.key.toString()] = entry.value;
+    }
+
+    return answers;
+  }
+
+Map<String, dynamic> _calculateResult(Map<String, String> userAnswers) {
+    int correct = 0;
+    Map<String, int> sectionScore = {"1": 0, "2": 0, "3": 0, "4": 0};
+
+    for (final section in _testData!['sections']) {
+      final int sectionNumber = section['section'];
+
+      for (final q in section['questions']) {
+        final int number = q['number'];
+        final String correctAnswer = (q['correctAnswer'] ?? '')
+            .toString()
+            .toLowerCase()
+            .trim();
+
+        final String userAnswer =
+    (userAnswers[number.toString()] ?? '')
+        .toLowerCase()
+        .trim();
+
+
+        if (userAnswer.isNotEmpty && userAnswer == correctAnswer) {
+          correct++;
+          sectionScore[sectionNumber.toString()] =
+              sectionScore[sectionNumber.toString()]! + 1;
+        }
+      }
+    }
+
+    final int total = _testData!['totalQuestions'] ?? 40;
+    final int incorrect = total - correct;
+
+    // IELTS Listening band (đơn giản hoá)
+    double band;
+    if (correct >= 30)
+      band = 7.0;
+    else if (correct >= 26)
+      band = 6.5;
+    else if (correct >= 23)
+      band = 6.0;
+    else
+      band = 5.5;
+
+    return {
+      "correct": correct,
+      "incorrect": incorrect,
+      "band": band,
+      "sectionScore": sectionScore,
+    };
+  }
+
   // ================= AUDIO PLAYER =================
   Widget _audioPlayer() {
     return Container(
@@ -206,10 +285,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
   }
 
   // ================= SECTION HEADER =================
-  Widget _sectionHeader({
-    required String title,
-    required String description,
-  }) {
+  Widget _sectionHeader({required String title, required String description}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -243,17 +319,10 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
       final String type = q['answerType'];
 
       if (type == 'input') {
-        _inputControllers.putIfAbsent(
-          number,
-          () => TextEditingController(),
-        );
+        _inputControllers.putIfAbsent(number, () => TextEditingController());
         return _questionInput(number, question, _inputControllers[number]!);
       } else {
-        return _questionMCQ(
-          number,
-          question,
-          List<String>.from(q['options']),
-        );
+        return _questionMCQ(number, question, List<String>.from(q['options']));
       }
     }).toList();
   }
@@ -297,11 +366,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
   }
 
   // ================= MCQ =================
-  Widget _questionMCQ(
-    int number,
-    String question,
-    List<String> options,
-  ) {
+  Widget _questionMCQ(int number, String question, List<String> options) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
@@ -355,21 +420,26 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
             "40 Questions",
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
-          const Spacer(),
-          ElevatedButton.icon(
-            onPressed: () => _showSubmitDialog(context),
-            icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-            label: const Text(
-              "Submit Test",
-              style:
-                  TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => _showSubmitDialog(context),
+              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+              label: const Text(
+                "Submit Test",
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
           ),
@@ -386,9 +456,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
         content: const Text(
           "Are you sure you want to submit your answers?\nYou cannot change them after submission.",
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -399,11 +467,8 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
               Navigator.pop(context);
               _autoSubmit();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-            ),
-            child:
-                const Text("Submit", style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: primaryBlue),
+            child: const Text("Submit", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class ListeningResultPage extends StatelessWidget {
-  const ListeningResultPage({super.key});
+  final String resultId;
+
+const ListeningResultPage({
+  super.key,
+  required this.resultId,
+});
+
 
   static const Color primaryBlue = Color(0xFF1976D2);
   static const Color successGreen = Color(0xFF4CAF50);
@@ -22,25 +30,48 @@ class ListeningResultPage extends StatelessWidget {
         foregroundColor: primaryBlue,
         elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _bandCard(),
-          const SizedBox(height: 24),
-          _summaryCard(),
-          const SizedBox(height: 28),
-          _sectionResult(),
-          const SizedBox(height: 24),
-            _feedbackCard(),
-            const SizedBox(height: 32),
-            _actionButtons(context),
-        ],
-      ),
+      body: FutureBuilder<DocumentSnapshot>(
+  future: FirebaseFirestore.instance
+      .collection('listening_results')
+      .doc(resultId)
+      .get(),
+  builder: (context, snapshot) {
+    if (!snapshot.hasData) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final data = snapshot.data!.data() as Map<String, dynamic>;
+
+    final double band = (data['band'] ?? 0).toDouble();
+    final int correct = data['correct'] ?? 0;
+    final int incorrect = data['incorrect'] ?? 0;
+    final int duration = data['durationUsed'] ?? 0;
+
+    final Map<String, dynamic> sectionScore =
+        Map<String, dynamic>.from(data['sectionScore'] ?? {});
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _bandCard(band),
+        const SizedBox(height: 24),
+        _summaryCard(correct, incorrect, duration),
+        const SizedBox(height: 28),
+        _sectionResult(sectionScore),
+        const SizedBox(height: 24),
+        _feedbackCard(sectionScore),
+        const SizedBox(height: 32),
+        _actionButtons(context),
+      ],
+    );
+  },
+),
+
     );
   }
 
   // ================= BAND CARD =================
-  Widget _bandCard() {
+  Widget _bandCard(double band) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -57,14 +88,14 @@ class ListeningResultPage extends StatelessWidget {
         ],
       ),
       child: Column(
-        children: const [
+        children: [
           Text(
             "Your Band Score",
             style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           SizedBox(height: 8),
           Text(
-            "6.5",
+            band.toStringAsFixed(1),
             style: TextStyle(
               fontSize: 56,
               fontWeight: FontWeight.bold,
@@ -82,17 +113,24 @@ class ListeningResultPage extends StatelessWidget {
   }
 
   // ================= SUMMARY =================
-  Widget _summaryCard() {
-    return Row(
-      children: [
-        _summaryItem("Correct", "28", successGreen),
-        const SizedBox(width: 12),
-        _summaryItem("Incorrect", "12", errorRed),
-        const SizedBox(width: 12),
-        _summaryItem("Time", "29:45", primaryBlue),
-      ],
-    );
-  }
+  Widget _summaryCard(int correct, int incorrect, int duration) {
+  return Row(
+    children: [
+      _summaryItem("Correct", "$correct", successGreen),
+      const SizedBox(width: 12),
+      _summaryItem("Incorrect", "$incorrect", errorRed),
+      const SizedBox(width: 12),
+      _summaryItem("Time", _formatTime(duration), primaryBlue),
+    ],
+  );
+}
+
+String _formatTime(int seconds) {
+  final m = seconds ~/ 60;
+  final s = seconds % 60;
+  return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+}
+
 
   Widget _summaryItem(String title, String value, Color color) {
     return Expanded(
@@ -124,22 +162,22 @@ class ListeningResultPage extends StatelessWidget {
   }
 
   // ================= SECTION RESULT =================
-  Widget _sectionResult() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Section Breakdown",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+  Widget _sectionResult(Map<String, dynamic> sectionScore) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text("Section Breakdown",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 12),
+      for (int i = 1; i <= 4; i++)
+        _sectionTile(
+          "Section $i",
+          "${sectionScore[i.toString()] ?? 0} / 10",
         ),
-        const SizedBox(height: 12),
-        _sectionTile("Section 1", "9 / 10"),
-        _sectionTile("Section 2", "7 / 10"),
-        _sectionTile("Section 3", "6 / 10"),
-        _sectionTile("Section 4", "6 / 10"),
-      ],
-    );
-  }
+    ],
+  );
+}
+
 
   Widget _sectionTile(String title, String score) {
     return Container(
@@ -169,34 +207,40 @@ class ListeningResultPage extends StatelessWidget {
   }
 
   // ================= FEEDBACK =================
-  Widget _feedbackCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: warningOrange.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: const [
-          Icon(Icons.lightbulb, color: warningOrange, size: 30),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              "Tip: Focus more on Section 3 & 4. Try to predict answers before listening.",
-              style: TextStyle(fontSize: 14),
-            ),
-          ),
-        ],
-      ),
-    );
+  Widget _feedbackCard(Map<String, dynamic> sectionScore) {
+  final List<String> weakSections = [];
+
+  sectionScore.forEach((key, value) {
+    if ((value ?? 0) < 6) {
+      weakSections.add("Section $key");
+    }
+  });
+
+  String message;
+  if (weakSections.isNotEmpty) {
+    message =
+        "You should focus more on ${weakSections.join(', ')}. These sections are below 60%.";
+  } else {
+    message =
+        "Great job! Your listening performance is consistent across all sections.";
   }
+
+  return Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.lightbulb, color: warningOrange, size: 30),
+        const SizedBox(width: 12),
+        Expanded(child: Text(message)),
+      ],
+    ),
+  );
+}
+
 
   // ================= ACTION BUTTONS =================
   Widget _actionButtons(BuildContext context) {
