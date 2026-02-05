@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'listening_test_page.dart';
 import 'listening_review_page.dart';
 
@@ -23,37 +24,66 @@ class ListeningPage extends StatelessWidget {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _overviewCard(),
-          const SizedBox(height: 28),
-          const Text(
-            "Full Listening Tests",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('listening_tests')
+            .orderBy('title')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          // ===== DONE TEST =====
-          _listeningTestCard(
-            context: context,
-            title: "IELTS Listening Test 1",
-            completed: true,
-            score: 28,
-            band: 6.5,
-          ),
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No listening tests found"));
+          }
 
-          // ===== NOT DONE =====
-          _listeningTestCard(context: context,title: "IELTS Listening Test 2", completed: false),
+          final tests = snapshot.data!.docs;
 
-          _listeningTestCard(context: context,title: "IELTS Listening Test 3", completed: false),
-        ],
+          // ===== OVERVIEW LOGIC (CHUẨN UX CŨ) =====
+          final int totalTests = tests.length;
+          final int completedTests = 0; // 🔥 chưa có result
+          final double averageBand = 0.0; // 🔥 chưa có band
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _overviewCard(
+                completed: completedTests,
+                total: totalTests,
+                averageBand: averageBand,
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                "Full Listening Tests",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+
+              ...tests.map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+
+                return _listeningTestCard(
+                  context: context,
+                  testId: doc.id,
+                  title: data['title'],
+                  totalQuestions: data['totalQuestions'],
+                  completed: false, // 🔥 sau này nối result
+                );
+              }).toList(),
+            ],
+          );
+        },
       ),
     );
   }
 
   // ================= OVERVIEW CARD =================
-  Widget _overviewCard() {
+  Widget _overviewCard({
+    required int completed,
+    required int total,
+    required double averageBand,
+  }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -70,14 +100,14 @@ class ListeningPage extends StatelessWidget {
           const SizedBox(width: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
+            children: [
+              const Text(
                 "Listening Progress",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 6),
-              Text("Completed: 1 / 10"),
-              Text("Average Band: 6.5"),
+              const SizedBox(height: 6),
+              Text("Completed: $completed / $total"),
+              Text("Average Band: ${averageBand.toStringAsFixed(1)}"),
             ],
           ),
         ],
@@ -88,7 +118,9 @@ class ListeningPage extends StatelessWidget {
   // ================= TEST CARD =================
   Widget _listeningTestCard({
     required BuildContext context,
+    required String testId,
     required String title,
+    required int totalQuestions,
     required bool completed,
     int? score,
     double? band,
@@ -110,34 +142,27 @@ class ListeningPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ===== TITLE =====
           Text(
             title,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 10),
-
-          // ===== META =====
           Row(
-            children: const [
-              Icon(Icons.layers, size: 18),
-              SizedBox(width: 6),
-              Text("4 Sections"),
-              SizedBox(width: 16),
-              Icon(Icons.help_outline, size: 18),
-              SizedBox(width: 6),
-              Text("40 Questions"),
+            children: [
+              const Icon(Icons.layers, size: 18),
+              const SizedBox(width: 6),
+              const Text("4 Sections"),
+              const SizedBox(width: 16),
+              const Icon(Icons.help_outline, size: 18),
+              const SizedBox(width: 6),
+              Text("$totalQuestions Questions"),
             ],
           ),
-
           const SizedBox(height: 14),
-
-          // ===== STATE =====
           if (completed) ...[
             Row(
               children: [
-                _infoChip("Score: $score/40"),
+                _infoChip("Score: $score/$totalQuestions"),
                 const SizedBox(width: 8),
                 _infoChip("Band: $band"),
               ],
@@ -149,14 +174,19 @@ class ListeningPage extends StatelessWidget {
               background: primaryBlue,
               textColor: Colors.white,
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ListeningReviewPage()),
-                );
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (_) => ListeningReviewPage(testId: testId),
+                //   ),
+                // );
               },
             ),
           ] else ...[
-            const Text("Not attempted", style: TextStyle(color: Colors.grey)),
+            const Text(
+              "Not attempted",
+              style: TextStyle(color: Colors.grey),
+            ),
             const SizedBox(height: 14),
             _primaryButton(
               text: "Start Test",
@@ -166,7 +196,9 @@ class ListeningPage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ListeningTestPage()),
+                  MaterialPageRoute(
+                    builder: (_) => ListeningTestPage(testId: testId),
+                  ),
                 );
               },
             ),
@@ -186,7 +218,10 @@ class ListeningPage extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(fontWeight: FontWeight.w600, color: primaryBlue),
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          color: primaryBlue,
+        ),
       ),
     );
   }
