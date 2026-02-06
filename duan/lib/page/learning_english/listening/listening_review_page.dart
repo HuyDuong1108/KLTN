@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ListeningReviewPage extends StatefulWidget {
-  const ListeningReviewPage({super.key});
+  final String resultId;
+
+  const ListeningReviewPage({super.key, required this.resultId});
 
   @override
   State<ListeningReviewPage> createState() => _ListeningReviewPageState();
@@ -51,48 +54,103 @@ class _ListeningReviewPageState extends State<ListeningReviewPage>
       ),
 
       // ================= BODY =================
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _sectionReview(section: 1),
-          _sectionReview(section: 2),
-          _sectionReview(section: 3),
-          _sectionReview(section: 4),
-        ],
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('listening_results')
+            .doc(widget.resultId)
+            .get(),
+        builder: (context, resultSnapshot) {
+          if (!resultSnapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final resultData =
+              resultSnapshot.data!.data() as Map<String, dynamic>;
+
+          final String testId = resultData['testId'];
+          final Map<String, dynamic> userAnswers = Map<String, dynamic>.from(
+            resultData['answers'],
+          );
+
+          // 🔥 fetch test
+          return FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('listening_tests')
+                .doc(testId)
+                .get(),
+            builder: (context, testSnapshot) {
+              if (!testSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final testData =
+                  testSnapshot.data!.data() as Map<String, dynamic>;
+
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _sectionReview(1, testData, userAnswers),
+                  _sectionReview(2, testData, userAnswers),
+                  _sectionReview(3, testData, userAnswers),
+                  _sectionReview(4, testData, userAnswers),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }
 
   // ================= SECTION REVIEW =================
-  Widget _sectionReview({required int section}) {
+  Widget _sectionReview(
+    int section,
+    Map<String, dynamic> testData,
+    Map<String, dynamic> userAnswers,
+  ) {
+    final sectionData = (testData['sections'] as List).firstWhere(
+      (s) => s['section'] == section,
+    );
+
+    final questions = sectionData['questions'] as List;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _sectionIntro(section),
         const SizedBox(height: 16),
 
-        // Demo questions
-        _reviewCard(
-          number: section * 10 - 9,
-          question: "Customer name",
-          yourAnswer: "Jon Smith",
-          correctAnswer: "John Smith",
-          correct: false,
-        ),
-        _reviewCard(
-          number: section * 10 - 8,
-          question: "Telephone number",
-          yourAnswer: "089234110",
-          correctAnswer: "089234110",
-          correct: true,
-        ),
-        _reviewCard(
-          number: section * 10 - 7,
-          question: "Type of accommodation",
-          yourAnswer: "Apartment",
-          correctAnswer: "Apartment",
-          correct: true,
-        ),
+        ...questions.map((q) {
+          final number = q['number'];
+          final question = q['question'];
+          String correctAnswer;
+
+          if (q['answerType'] == 'mcq') {
+            final int correctIndex = q['correctAnswer'];
+            final List options = q['options'];
+
+            correctAnswer = (correctIndex >= 0 && correctIndex < options.length)
+                ? options[correctIndex].toString()
+                : '';
+          } else {
+            correctAnswer = q['correctAnswer'].toString().trim().toLowerCase();
+          }
+
+          final yourAnswer = (userAnswers[number.toString()] ?? '')
+              .toString()
+              .trim()
+              .toLowerCase();
+
+          final correct = yourAnswer == correctAnswer;
+
+          return _reviewCard(
+            number: number,
+            question: question,
+            yourAnswer: yourAnswer.isEmpty ? '—' : yourAnswer,
+            correctAnswer: correctAnswer,
+            correct: correct,
+          );
+        }),
       ],
     );
   }
@@ -121,7 +179,7 @@ class _ListeningReviewPageState extends State<ListeningReviewPage>
               ),
               const SizedBox(height: 4),
               const Text(
-                "Check your answers and learn from mistakes",
+                "Check your answers, learn from mistakes",
                 style: TextStyle(color: Colors.grey),
               ),
             ],

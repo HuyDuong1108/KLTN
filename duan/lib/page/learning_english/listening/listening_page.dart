@@ -59,7 +59,7 @@ class ListeningPage extends StatelessWidget {
                 final testId = data['testId'];
 
                 if (!latestResultByTest.containsKey(testId)) {
-                  latestResultByTest[testId] = data;
+                  latestResultByTest[testId] = {...data, 'id': doc.id};
                 }
               }
               return ListView(
@@ -94,6 +94,7 @@ class ListeningPage extends StatelessWidget {
                       completed: result != null,
                       score: result?['correct'],
                       band: result?['band'],
+                      resultId: result?['id'],
                     );
                   }).toList(),
                 ],
@@ -151,6 +152,7 @@ class ListeningPage extends StatelessWidget {
     required bool completed,
     int? score,
     double? band,
+    String? resultId,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
@@ -201,15 +203,17 @@ class ListeningPage extends StatelessWidget {
                 // ===== REVIEW TEST =====
                 Expanded(
                   child: SizedBox(
-                    height: 48, // 🔥 GIỐNG START TEST
+                    height: 48,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (_) => ListeningReviewPage(testId: testId),
-                        //   ),
-                        // );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ListeningReviewPage(
+                              resultId: resultId!, // 🔥 CHÚ Ý
+                            ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.analytics_outlined, size: 22),
                       label: const Text(
