@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'listening_review_page.dart';
 
 
 class ListeningResultPage extends StatelessWidget {
@@ -251,7 +252,12 @@ String _formatTime(int seconds) {
           height: 52,
           child: ElevatedButton.icon(
             onPressed: () {
-              // TODO: Navigate to review answers page
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ListeningReviewPage(resultId: resultId),
+                ),
+              );
             },
             icon: const Icon(Icons.search, color: Colors.white),
             label: const Text(
@@ -277,7 +283,7 @@ String _formatTime(int seconds) {
           height: 52,
           child: OutlinedButton.icon(
             onPressed: () {
-              Navigator.pop(context); // quay lại test
+              Navigator.pop(context); 
             },
             icon: const Icon(Icons.refresh),
             label: const Text(

@@ -196,7 +196,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
     return answers;
   }
 
-Map<String, dynamic> _calculateResult(Map<String, String> userAnswers) {
+  Map<String, dynamic> _calculateResult(Map<String, String> userAnswers) {
     int correct = 0;
     Map<String, int> sectionScore = {"1": 0, "2": 0, "3": 0, "4": 0};
 
@@ -210,11 +210,9 @@ Map<String, dynamic> _calculateResult(Map<String, String> userAnswers) {
             .toLowerCase()
             .trim();
 
-        final String userAnswer =
-    (userAnswers[number.toString()] ?? '')
-        .toLowerCase()
-        .trim();
-
+        final String userAnswer = (userAnswers[number.toString()] ?? '')
+            .toLowerCase()
+            .trim();
 
         if (userAnswer.isNotEmpty && userAnswer == correctAnswer) {
           correct++;
@@ -423,22 +421,28 @@ Map<String, dynamic> _calculateResult(Map<String, String> userAnswers) {
           const SizedBox(width: 12),
 
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _showSubmitDialog(context),
-              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-              label: const Text(
-                "Submit Test",
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
+            child: SizedBox(
+              height: 40,
+              child: ElevatedButton.icon(
+                onPressed: () => _showSubmitDialog(context),
+                icon: const Icon(
+                  Icons.check_circle_outline,
                   color: Colors.white,
                 ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                label: const Text(
+                  "Submit Test",
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryBlue,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),
