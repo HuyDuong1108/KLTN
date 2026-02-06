@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'reading_test_page.dart';
 import 'reading_review_page.dart';
 
@@ -44,26 +45,56 @@ class ReadingPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // ===== DONE TEST =====
-          _readingTestCard(
-            context: context,
-            title: "IELTS Reading Test 1",
-            completed: true,
-            correct: 30,
-            band: 7.0,
-          ),
+          /// 🔥 LOAD DATA FROM FIRESTORE
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('reading_tests')
+                .orderBy('id')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
 
-          // ===== NOT DONE =====
-          _readingTestCard(
-            context: context,
-            title: "IELTS Reading Test 2",
-            completed: false,
-          ),
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(
+                  child: Text("No reading tests found"),
+                );
+              }
 
-          _readingTestCard(
-            context: context,
-            title: "IELTS Reading Test 3",
-            completed: false,
+              final tests = snapshot.data!.docs;
+
+              return Column(
+                children: tests.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+
+                  final String title = data['title'];
+                  final int totalQuestions = data['totalQuestions'];
+                  final int duration = data['duration'];
+
+                  /// 👉 sau này bạn có thể lưu result riêng
+                  final bool completed = false;
+                  final int? correct = null;
+                  final double? band = null;
+
+                  return _readingTestCard(
+                    context: context,
+                    title: title,
+                    totalQuestions: totalQuestions,
+                    duration: duration,
+                    completed: completed,
+                    correct: correct,
+                    band: band,
+                    testId: doc.id,
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),
@@ -95,8 +126,8 @@ class ReadingPage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 6),
-              Text("Completed: 1 / 10"),
-              Text("Average Band: 7.0"),
+              Text("Completed: --"),
+              Text("Average Band: --"),
             ],
           ),
         ],
@@ -108,9 +139,12 @@ class ReadingPage extends StatelessWidget {
   Widget _readingTestCard({
     required BuildContext context,
     required String title,
+    required int totalQuestions,
+    required int duration,
     required bool completed,
     int? correct,
     double? band,
+    required String testId,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
@@ -142,18 +176,18 @@ class ReadingPage extends StatelessWidget {
 
           // ===== META =====
           Row(
-            children: const [
-              Icon(Icons.article_outlined, size: 18),
-              SizedBox(width: 6),
-              Text("3 Passages"),
-              SizedBox(width: 16),
-              Icon(Icons.help_outline, size: 18),
-              SizedBox(width: 6),
-              Text("40 Questions"),
-              SizedBox(width: 16),
-              Icon(Icons.timer_outlined, size: 18),
-              SizedBox(width: 6),
-              Text("60 min"),
+            children: [
+              const Icon(Icons.article_outlined, size: 18),
+              const SizedBox(width: 6),
+              const Text("3 Passages"),
+              const SizedBox(width: 16),
+              const Icon(Icons.help_outline, size: 18),
+              const SizedBox(width: 6),
+              Text("$totalQuestions Questions"),
+              const SizedBox(width: 16),
+              const Icon(Icons.timer_outlined, size: 18),
+              const SizedBox(width: 6),
+              Text("$duration min"),
             ],
           ),
 
@@ -163,7 +197,7 @@ class ReadingPage extends StatelessWidget {
           if (completed) ...[
             Row(
               children: [
-                _infoChip("Correct: $correct / 40"),
+                _infoChip("Correct: $correct / $totalQuestions"),
                 const SizedBox(width: 8),
                 _infoChip("Band: $band"),
               ],
@@ -174,10 +208,12 @@ class ReadingPage extends StatelessWidget {
               icon: Icons.analytics_outlined,
               color: primaryBlue,
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ReadingReviewPage()),
-                );
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (_) => ReadingReviewPage(testId: testId),
+                //   ),
+                // );
               },
             ),
           ] else ...[
@@ -193,7 +229,9 @@ class ReadingPage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ReadingTestPage()),
+                  MaterialPageRoute(
+                    builder: (_) => ReadingTestPage(testId: testId),
+                  ),
                 );
               },
             ),
