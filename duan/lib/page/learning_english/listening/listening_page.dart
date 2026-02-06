@@ -41,37 +41,64 @@ class ListeningPage extends StatelessWidget {
           final tests = snapshot.data!.docs;
 
           // ===== OVERVIEW LOGIC (CHUẨN UX CŨ) =====
-          final int totalTests = tests.length;
-          final int completedTests = 0; // 🔥 chưa có result
-          final double averageBand = 0.0; // 🔥 chưa có band
+          return FutureBuilder<QuerySnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('listening_results')
+                .orderBy('submittedAt', descending: true)
+                .get(),
+            builder: (context, resultSnapshot) {
+              if (!resultSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _overviewCard(
-                completed: completedTests,
-                total: totalTests,
-                averageBand: averageBand,
-              ),
-              const SizedBox(height: 28),
-              const Text(
-                "Full Listening Tests",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+              final results = resultSnapshot.data!.docs;
+              final Map<String, Map<String, dynamic>> latestResultByTest = {};
 
-              ...tests.map((doc) {
+              for (final doc in results) {
                 final data = doc.data() as Map<String, dynamic>;
+                final testId = data['testId'];
 
-                return _listeningTestCard(
-                  context: context,
-                  testId: doc.id,
-                  title: data['title'],
-                  totalQuestions: data['totalQuestions'],
-                  completed: false, // 🔥 sau này nối result
-                );
-              }).toList(),
-            ],
+                if (!latestResultByTest.containsKey(testId)) {
+                  latestResultByTest[testId] = data;
+                }
+              }
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _overviewCard(
+                    completed: latestResultByTest.length,
+                    total: tests.length,
+                    averageBand: latestResultByTest.isEmpty
+                        ? 0
+                        : latestResultByTest.values
+                                  .map((e) => (e['band'] ?? 0).toDouble())
+                                  .reduce((a, b) => a + b) /
+                              latestResultByTest.length,
+                  ),
+                  const SizedBox(height: 28),
+                  const Text(
+                    "Full Listening Tests",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+
+                  ...tests.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final result = latestResultByTest[doc.id];
+
+                    return _listeningTestCard(
+                      context: context,
+                      testId: doc.id,
+                      title: data['title'],
+                      totalQuestions: data['totalQuestions'],
+                      completed: result != null,
+                      score: result?['correct'],
+                      band: result?['band'],
+                    );
+                  }).toList(),
+                ],
+              );
+            },
           );
         },
       ),
@@ -164,29 +191,83 @@ class ListeningPage extends StatelessWidget {
               children: [
                 _infoChip("Score: $score/$totalQuestions"),
                 const SizedBox(width: 8),
-                _infoChip("Band: $band"),
+                _infoChip("Band: ${band?.toStringAsFixed(1)}"),
               ],
             ),
             const SizedBox(height: 14),
-            _primaryButton(
-              text: "Review Test",
-              icon: Icons.analytics_outlined,
-              background: primaryBlue,
-              textColor: Colors.white,
-              onPressed: () {
-                // Navigator.push(
-                //   context,
-                //   MaterialPageRoute(
-                //     builder: (_) => ListeningReviewPage(testId: testId),
-                //   ),
-                // );
-              },
+
+            Row(
+              children: [
+                // ===== REVIEW TEST =====
+                Expanded(
+                  child: SizedBox(
+                    height: 48, // 🔥 GIỐNG START TEST
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // Navigator.push(
+                        //   context,
+                        //   MaterialPageRoute(
+                        //     builder: (_) => ListeningReviewPage(testId: testId),
+                        //   ),
+                        // );
+                      },
+                      icon: const Icon(Icons.analytics_outlined, size: 22),
+                      label: const Text(
+                        "Review",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryBlue,
+                        foregroundColor: Colors.white,
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // ===== TEST AGAIN =====
+                Expanded(
+                  child: SizedBox(
+                    height: 48, // 🔥 GIỐNG START TEST
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ListeningTestPage(testId: testId),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.refresh, size: 22),
+                      label: const Text(
+                        "Test Again",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: lightBlue,
+                        side: BorderSide(color: lightBlue, width: 1.6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ] else ...[
-            const Text(
-              "Not attempted",
-              style: TextStyle(color: Colors.grey),
-            ),
+            const Text("Not attempted", style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 14),
             _primaryButton(
               text: "Start Test",
@@ -218,10 +299,7 @@ class ListeningPage extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          color: primaryBlue,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w600, color: primaryBlue),
       ),
     );
   }
