@@ -18,6 +18,8 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
   static const Color highlightYellow = Color(0xFFFFF59D);
   static const Color highlightBlue = Color(0xFFB3E5FC);
   static const Color highlightGreen = Color(0xFFC8E6C9);
+  static const Color highlightPurple = Color(0xFFE1BEE7); // THÊM MÀU TÍM
+static const Color highlightOrange = Color(0xFFFFE0B2);
   static const Color bgColor = Color(0xFFF6FAFF);
   static const Color textGrey = Color(0xFF455A64);
 
@@ -25,8 +27,9 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
 
   final Map<int, List<TextMark>> passageMarks = {};
   int? currentPassageIndex;
+  Offset? selectionPosition;
   TextSelection? currentSelection;
-  final FocusNode _focusNode = FocusNode(); 
+  final FocusNode _focusNode = FocusNode();
   bool isMenuOpen = false;
 
   final Map<int, String?> answers = {};
@@ -74,7 +77,8 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _passageHeader(index + 1),
-_readingPassage(passage['content'], index),                  const SizedBox(height: 24),
+                  _readingPassage(passage['content'], index),
+                  const SizedBox(height: 24),
                   _questionSection(questions),
                   const SizedBox(height: 40),
                 ],
@@ -90,13 +94,13 @@ _readingPassage(passage['content'], index),                  const SizedBox(heig
   }
 
   @override
-void dispose() {
-  _focusNode.dispose();
-  for (var controller in sentenceControllers.values) {
-    controller.dispose();
+  void dispose() {
+    _focusNode.dispose();
+    for (var controller in sentenceControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
-  super.dispose();
-}
 
   // ================= HEADER =================
   Widget _passageHeader(int passageNumber) {
@@ -128,7 +132,7 @@ void dispose() {
     );
   }
 
-// ================= PASSAGE =================
+  // ================= PASSAGE =================
 Widget _readingPassage(String passageText, int passageIndex) {
   return Container(
     padding: const EdgeInsets.all(16),
@@ -139,15 +143,18 @@ Widget _readingPassage(String passageText, int passageIndex) {
     ),
     child: Listener(
       onPointerUp: (event) {
+        // Lưu vị trí pointer
+        selectionPosition = event.position;
+        
         Future.delayed(const Duration(milliseconds: 100), () {
           if (currentSelection != null &&
               currentSelection!.start != currentSelection!.end &&
               !isMenuOpen) {
             setState(() {
               isMenuOpen = true;
-              currentPassageIndex = passageIndex; // Lưu passage hiện tại
+              currentPassageIndex = passageIndex;
             });
-            _showHighlightMenu();
+            _showFloatingHighlightMenu();
           }
         });
       },
@@ -164,53 +171,215 @@ Widget _readingPassage(String passageText, int passageIndex) {
     ),
   );
 }
-// ================= BUILD HIGHLIGHTED TEXT =================
-TextSpan _buildHighlightedText(String text, int passageIndex) {
-  // Kiểm tra an toàn
-  if (passageMarks[passageIndex] == null || passageMarks[passageIndex]!.isEmpty) {
-    return TextSpan(text: text);
-  }
-  
-  final marks = passageMarks[passageIndex]!;
+// ================= FLOATING HIGHLIGHT MENU =================
+void _showFloatingHighlightMenu() {
+  if (selectionPosition == null) return;
 
-  // Sắp xếp marks theo vị trí start
-  final sortedMarks = List<TextMark>.from(marks)
-    ..sort((a, b) => a.start.compareTo(b.start));
+  final overlay = Overlay.of(context);
+  OverlayEntry? overlayEntry;
 
-  List<TextSpan> spans = [];
-  int currentIndex = 0;
+  overlayEntry = OverlayEntry(
+    builder: (context) => Positioned(
+      left: selectionPosition!.dx - 180,
+      top: selectionPosition!.dy - 80, // Hiển thị phía trên vị trí bôi đen
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: primaryBlue.withOpacity(0.2), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // // Tiêu đề
+              // Container(
+              //   padding: const EdgeInsets.symmetric(horizontal: 8),
+              //   child: Row(
+              //     children: [
+              //       Icon(Icons.palette, size: 18, color: primaryBlue),
+              //       const SizedBox(width: 6),
+              //       const Text(
+              //         "Highlight",
+              //         style: TextStyle(
+              //           fontSize: 13,
+              //           fontWeight: FontWeight.w600,
+              //           color: textGrey,
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
+              
+              // const SizedBox(width: 8),
+              
+              // // Divider dọc
+              // Container(
+              //   height: 30,
+              //   width: 1,
+              //   color: Colors.grey.shade300,
+              // ),
+              
+              // const SizedBox(width: 8),
+              
+              // Các nút màu
+              _floatingColorButton(highlightYellow, overlayEntry),
+              const SizedBox(width: 6),
+              _floatingColorButton(highlightBlue, overlayEntry),
+              const SizedBox(width: 6),
+              _floatingColorButton(highlightGreen, overlayEntry),
+              const SizedBox(width: 6),
+              _floatingColorButton(highlightPurple, overlayEntry),
+              const SizedBox(width: 6),
+              _floatingColorButton(highlightOrange, overlayEntry),
+              
+              const SizedBox(width: 8),
+              
+              // Divider dọc
+              Container(
+                height: 30,
+                width: 1,
+                color: Colors.grey.shade300,
+              ),
+              
+              const SizedBox(width: 4),
+              
+              // Nút đóng
+              IconButton(
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () {
+                  overlayEntry?.remove();
+                  setState(() {
+                    isMenuOpen = false;
+                    currentSelection = null;
+                  });
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                color: Colors.grey.shade600,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 
-  for (var mark in sortedMarks) {
-    // Kiểm tra index hợp lệ
-    if (mark.start < 0 || mark.end > text.length || mark.start >= mark.end) {
-      continue; // Bỏ qua mark không hợp lệ
-    }
-    
-    // Text trước highlight
-    if (currentIndex < mark.start) {
-      spans.add(TextSpan(
-        text: text.substring(currentIndex, mark.start),
-      ));
-    }
-
-    // Text được highlight
-    spans.add(TextSpan(
-      text: text.substring(mark.start, mark.end),
-      style: TextStyle(backgroundColor: mark.color),
-    ));
-
-    currentIndex = mark.end;
-  }
-
-  // Text còn lại sau highlight cuối
-  if (currentIndex < text.length) {
-    spans.add(TextSpan(
-      text: text.substring(currentIndex),
-    ));
-  }
-
-  return TextSpan(children: spans);
+  overlay.insert(overlayEntry);
 }
+// ================= FLOATING COLOR BUTTON =================
+Widget _floatingColorButton(Color color, OverlayEntry? overlayEntry) {
+  return GestureDetector(
+    onTap: () {
+      if (currentSelection != null && currentPassageIndex != null) {
+        // Khởi tạo list nếu chưa có
+        if (!passageMarks.containsKey(currentPassageIndex)) {
+          passageMarks[currentPassageIndex!] = [];
+        }
+        
+        // Thêm mark vào passage tương ứng
+        passageMarks[currentPassageIndex!]!.add(
+          TextMark(
+            start: currentSelection!.start,
+            end: currentSelection!.end,
+            color: color,
+          ),
+        );
+        
+        // Đóng overlay
+        overlayEntry?.remove();
+        
+        // Update UI
+        setState(() {
+          isMenuOpen = false;
+          currentSelection = null;
+        });
+      }
+    },
+    child: Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(
+        Icons.check,
+        size: 16,
+        color: Colors.black.withOpacity(0.6),
+      ),
+    ),
+  );
+}
+  // ================= BUILD HIGHLIGHTED TEXT =================
+  TextSpan _buildHighlightedText(String text, int passageIndex) {
+    // Kiểm tra an toàn
+    if (passageMarks[passageIndex] == null ||
+        passageMarks[passageIndex]!.isEmpty) {
+      return TextSpan(text: text);
+    }
+
+    final marks = passageMarks[passageIndex]!;
+
+    // Sắp xếp marks theo vị trí start
+    final sortedMarks = List<TextMark>.from(marks)
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    List<TextSpan> spans = [];
+    int currentIndex = 0;
+
+    for (var mark in sortedMarks) {
+      // Kiểm tra index hợp lệ
+      if (mark.start < 0 || mark.end > text.length || mark.start >= mark.end) {
+        continue; // Bỏ qua mark không hợp lệ
+      }
+
+      // Text trước highlight
+      if (currentIndex < mark.start) {
+        spans.add(TextSpan(text: text.substring(currentIndex, mark.start)));
+      }
+
+      // Text được highlight
+      spans.add(
+        TextSpan(
+          text: text.substring(mark.start, mark.end),
+          style: TextStyle(backgroundColor: mark.color),
+        ),
+      );
+
+      currentIndex = mark.end;
+    }
+
+    // Text còn lại sau highlight cuối
+    if (currentIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(currentIndex)));
+    }
+
+    return TextSpan(children: spans);
+  }
+
   // ================= QUESTIONS =================
   Widget _questionSection(List questions) {
     return Column(
@@ -316,80 +485,6 @@ TextSpan _buildHighlightedText(String text, int passageIndex) {
     );
   }
 
-  // ================= HIGHLIGHT MENU =================
-void _showHighlightMenu() {
-  showModalBottomSheet(
-    context: context,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (_) => Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            "Choose Highlight Color",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _colorButton(highlightYellow),
-              _colorButton(highlightBlue),
-              _colorButton(highlightGreen),
-            ],
-          ),
-        ],
-      ),
-    ),
-  ).whenComplete(() => isMenuOpen = false);
-}
-  Widget _colorButton(Color color) {
-  return GestureDetector(
-    onTap: () {
-      if (currentSelection != null && currentPassageIndex != null) {
-        // Khởi tạo list nếu chưa có
-        if (!passageMarks.containsKey(currentPassageIndex)) {
-          passageMarks[currentPassageIndex!] = [];
-        }
-        
-        // Thêm mark vào passage tương ứng
-        passageMarks[currentPassageIndex!]!.add(
-          TextMark(
-            start: currentSelection!.start,
-            end: currentSelection!.end,
-            color: color,
-          ),
-        );
-        
-        Navigator.pop(context);
-        
-        // Sau khi đóng bottom sheet, mới setState
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted) {
-            setState(() {
-              currentSelection = null;
-            });
-          }
-        });
-      } else {
-        Navigator.pop(context);
-      }
-    },
-    child: Container(
-      margin: const EdgeInsets.all(8),
-      child: CircleAvatar(
-        backgroundColor: color,
-        radius: 30,
-      ),
-    ),
-  );
-}
   // ================= SUBMIT =================
   Widget _bottomSubmitBar() {
     return Container(
