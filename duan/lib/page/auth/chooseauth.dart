@@ -15,8 +15,8 @@ class WelcomePage extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFFDE3A7), // cam nhạt
-              Color(0xFFD6EAF8), // xanh nhạt
+              Color(0xFFE3F2FD), 
+  Color(0xFFFFFFFF),
             ],
           ),
         ),
@@ -26,18 +26,18 @@ class WelcomePage extends StatelessWidget {
             // Logo con sóc
             Image.asset(
               "lib/image/logo.png",
-              width: 180, // tăng kích thước logo
-              height: 180,
+              width: 250, // tăng kích thước logo
+              height: 250,
             ),
             const SizedBox(height: 30),
 
             // Tên app
             const Text(
-              "LinguaSquirrel",
+              "DolphSpeak",
               style: TextStyle(
                 fontSize: 36, // chữ to hơn
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Color(0xFF1976D2),
               ),
             ),
 
@@ -45,10 +45,10 @@ class WelcomePage extends StatelessWidget {
 
             // Subtitle
             const Text(
-              "Ứng dụng học ngôn ngữ Đông Á",
+              "Học nói tiếng Anh cùng cá heo",
               style: TextStyle(
                 fontSize: 20, // subtitle cũng to hơn
-                color: Colors.black54,
+                color: Color(0xFF607D8B),
               ),
             ),
 
@@ -66,12 +66,13 @@ class WelcomePage extends StatelessWidget {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  elevation: 5, // thêm bóng để nổi bật
-                ),
+  backgroundColor: Color(0xFF42A5F5),
+  elevation: 5,
+  shadowColor: const Color(0x554FC3F7), // xanh cá heo mờ
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(30),
+  ),
+),
                 child: const Text(
                   "CREATE ACCOUNT",
                   style: TextStyle(
@@ -97,18 +98,21 @@ class WelcomePage extends StatelessWidget {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black87,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  elevation: 5,
-                ),
+  backgroundColor: const Color(0xFF4FC3F7),
+  elevation: 5,
+  shadowColor: const Color(0x554FC3F7), // xanh cá heo mờ
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(30),
+  ),
+),
+
                 child: const Text(
                   "LOG IN",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Color.fromARGB(255, 233, 238, 240),
+
                   ),
                 ),
               ),

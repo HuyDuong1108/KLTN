@@ -5,10 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class ContinueLearningCard extends StatelessWidget {
   final Future<void> Function(String lessonPath) onContinue;
 
-  const ContinueLearningCard({
-    super.key,
-    required this.onContinue,
-  });
+  const ContinueLearningCard({super.key, required this.onContinue});
   String _prettyCourseId(String courseId) {
     if (courseId.startsWith("level_")) {
       final n = courseId.replaceFirst("level_", "");
@@ -16,7 +13,6 @@ class ContinueLearningCard extends StatelessWidget {
     }
     return courseId;
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -86,29 +82,38 @@ class ContinueLearningCard extends StatelessWidget {
 
         String? languageCode;
 
-      if (snapshot.hasData && snapshot.data!.exists) {
+        if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data() ?? {};
-          languageCode = (data['languageCode'] ?? data['lang'] ?? '').toString().trim();
-      }
+          languageCode = (data['languageCode'] ?? data['lang'] ?? '')
+              .toString()
+              .trim();
+        }
 
-      return _cardShell(
-        subtitle: subtitle,
-        enabled: lessonPath != null,
-        onPressed: lessonPath == null ? null : () => onContinue(lessonPath!),
-        languageCode: languageCode,
-      );
+        return _cardShell(
+          subtitle: subtitle,
+          enabled: lessonPath != null,
+          onPressed: lessonPath == null ? null : () => onContinue(lessonPath!),
+          languageCode: languageCode,
+        );
       },
     );
   }
+
   String _flagForLanguage({String? languageCode, String? headText}) {
     final code = (languageCode ?? '').toLowerCase().trim();
-    if (code == 'ja' || code == 'jp' || (headText ?? '').toLowerCase().contains('japan')) {
+    if (code == 'ja' ||
+        code == 'jp' ||
+        (headText ?? '').toLowerCase().contains('japan')) {
       return '🇯🇵';
     }
-    if (code == 'ko' || code == 'kr' || (headText ?? '').toLowerCase().contains('korean')) {
+    if (code == 'ko' ||
+        code == 'kr' ||
+        (headText ?? '').toLowerCase().contains('korean')) {
       return '🇰🇷';
     }
-    if (code == 'zh' || code == 'cn' || (headText ?? '').toLowerCase().contains('chinese')) {
+    if (code == 'zh' ||
+        code == 'cn' ||
+        (headText ?? '').toLowerCase().contains('chinese')) {
       return '🇨🇳';
     }
     if (code == 'en' || (headText ?? '').toLowerCase().contains('english')) {
@@ -140,7 +145,7 @@ class ContinueLearningCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withOpacity(0.22),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
@@ -193,16 +198,12 @@ class ContinueLearningCard extends StatelessWidget {
             tail,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white70,
-              height: 1.2,
-            ),
+            style: const TextStyle(color: Colors.white70, height: 1.2),
           ),
         ],
       ],
     );
   }
-
 
   Widget _cardShell({
     required String subtitle,
@@ -212,7 +213,7 @@ class ContinueLearningCard extends StatelessWidget {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.deepOrange.shade400,
+        color: Color(0xFF4FC3F7),
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(16),
@@ -236,21 +237,36 @@ class ContinueLearningCard extends StatelessWidget {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: Colors.deepOrange,
+                    foregroundColor: const Color(0xFF1976D2),
+                    elevation: 3,
+                    shadowColor: Color(0x224FC3F7),
+
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
+
                   onPressed: enabled ? onPressed : null,
-                  child: const Text("Continue"),
+                  child: const Text(
+                    "Continue",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 10),
-          SizedBox(
-            height: 100,
-            width: 100,
+          Container(
+            height: 130,
+            width: 130,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Image.asset("lib/image/logo.png"),
           ),
         ],

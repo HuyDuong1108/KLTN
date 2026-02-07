@@ -166,7 +166,7 @@ extension _StatisticsDetailHistory on _StatisticsDetailPageState {
                           width: 10,
                           height: 10,
                           decoration: const BoxDecoration(
-                            color: Colors.orange,
+                            color: Colors.blue,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -183,9 +183,9 @@ extension _StatisticsDetailHistory on _StatisticsDetailPageState {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.05),
+                          color: Colors.blue.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.orange.withOpacity(0.18)),
+                          border: Border.all(color: Colors.blue.withOpacity(0.18)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +274,7 @@ extension _StatisticsDetailHistory on _StatisticsDetailPageState {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.orange.withOpacity(0.18)),
+        border: Border.all(color: Colors.blue.withOpacity(0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

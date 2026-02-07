@@ -29,7 +29,7 @@ class FlashcardStudyResultPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.orange.shade400,
+        backgroundColor: Colors.blue.shade400,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
@@ -119,7 +119,7 @@ class QuizResultPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.orange.shade400,
+        backgroundColor: Colors.blue.shade400,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
@@ -230,7 +230,7 @@ class TypingResultPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.orange.shade400,
+        backgroundColor: Colors.blue.shade400,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
@@ -413,8 +413,8 @@ class _ChipStat extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.orange.shade200),
-        color: Colors.orange.shade50,
+        border: Border.all(color: Colors.blue.shade200),
+        color: Colors.blue.shade50,
       ),
       child: Text(
         '$label: $value',
@@ -447,8 +447,8 @@ class _BottomButtons extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onLeft,
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.orange.shade700,
-                side: BorderSide(color: Colors.orange.shade300, width: 1.2),
+                foregroundColor: Colors.blue.shade700,
+                side: BorderSide(color: Colors.blue.shade300, width: 1.2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -464,7 +464,7 @@ class _BottomButtons extends StatelessWidget {
             child: ElevatedButton(
               onPressed: onRight,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange.shade400,
+                backgroundColor: Colors.blue.shade400,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),

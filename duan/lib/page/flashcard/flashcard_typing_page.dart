@@ -145,7 +145,7 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.orange,
+        backgroundColor: Colors.blue,
         title: const Text("Typing Flashcard"),
         elevation: 0,
       ),
@@ -159,8 +159,8 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
               child: LinearProgressIndicator(
                 value: (currentIndex + 1) / widget.vocabList.length,
                 minHeight: 8,
-                color: Colors.orange,
-                backgroundColor: Colors.orange.shade100,
+                color: Colors.blue,
+                backgroundColor: Colors.blue.shade100,
               ),
             ),
             const SizedBox(height: 20),
@@ -175,7 +175,7 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.orange.shade200.withOpacity(0.4),
+                    color: Colors.blue.shade200.withOpacity(0.4),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -217,7 +217,7 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.orange.shade100.withOpacity(0.6),
+                        color: Colors.blue.shade100.withOpacity(0.6),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       )
@@ -253,7 +253,7 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
                     child: ElevatedButton(
                       onPressed: showResult ? null : checkAnswer,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),

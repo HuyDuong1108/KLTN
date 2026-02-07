@@ -89,7 +89,7 @@ extension _StatisticsDetailProgress on _StatisticsDetailPageState {
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12,
-                                  color: isToday ? Colors.deepOrange : Colors.grey.shade800,
+                                  color: isToday ? Colors.blueAccent : Colors.grey.shade800,
                                 ),
                               ),
                             ),
@@ -107,14 +107,14 @@ extension _StatisticsDetailProgress on _StatisticsDetailPageState {
                                 begin: Alignment.bottomCenter,
                                 end: Alignment.topCenter,
                                 colors: [
-                                  Colors.orange.shade300.withOpacity(0.55),
-                                  Colors.deepOrange.shade400.withOpacity(0.25),
+                                  Colors.blue.shade300.withOpacity(0.55),
+                                  Colors.blueAccent.withOpacity(0.25),
                                 ],
                               ),
                               border: Border.all(
                                 color: isToday
-                                    ? Colors.deepOrange.withOpacity(0.65)
-                                    : Colors.orange.withOpacity(0.30),
+                                    ? Colors.blueAccent.withOpacity(0.65)
+                                    : Colors.blue.withOpacity(0.30),
                                 width: isToday ? 1.5 : 1.0,
                               ),
                             ),
@@ -146,7 +146,7 @@ extension _StatisticsDetailProgress on _StatisticsDetailPageState {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: isToday ? FontWeight.w800 : FontWeight.w400,
-                            color: isToday ? Colors.deepOrange : Colors.grey.shade700,
+                            color: isToday ? Colors.blueAccent : Colors.grey.shade700,
                           ),
                         ),
                       ),

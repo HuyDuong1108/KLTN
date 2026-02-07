@@ -296,12 +296,12 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
                     width: 46,
                     height: 46,
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
+                      color: Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
                       Icons.warning_amber_rounded,
-                      color: Colors.orange.shade700,
+                      color: Colors.blue.shade700,
                       size: 28,
                     ),
                   ),
@@ -334,8 +334,8 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
                               Navigator.pop(context); // về bộ thẻ
                             },
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange.shade700,
-                              side: BorderSide(color: Colors.orange.shade300, width: 1.2),
+                              foregroundColor: Colors.blue.shade700,
+                              side: BorderSide(color: Colors.blue.shade300, width: 1.2),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
@@ -357,7 +357,7 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
                               _jumpToFirstUnrated();
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange.shade400,
+                              backgroundColor: Colors.blue.shade400,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -488,7 +488,7 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
       return Scaffold(
         appBar: AppBar(
           title: Text('Flashcards - ${widget.setTitle}'),
-          backgroundColor: Colors.orange.shade400,
+          backgroundColor: Colors.blue.shade400,
         ),
         body: const Center(child: Text('Deck trống.')),
       );
@@ -503,7 +503,7 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
           'Flashcards - ${widget.setTitle}',
           style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.orange.shade400,
+        backgroundColor: Colors.blue.shade400,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
       ),
@@ -564,7 +564,7 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
                               ),
                               const Spacer(),
                               IconButton(
-                                icon: Icon(Icons.volume_up_rounded, size: 26, color: Colors.orange.shade400),
+                                icon: Icon(Icons.volume_up_rounded, size: 26, color: Colors.blue.shade400),
                                 onPressed: () => speak(v.word),
                               ),
                             ],
@@ -612,7 +612,7 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
                       child: ElevatedButton(
                         onPressed: () => setState(() => showMeaning = !showMeaning),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange.shade400,
+                          backgroundColor: Colors.blue.shade400,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                           elevation: 0,

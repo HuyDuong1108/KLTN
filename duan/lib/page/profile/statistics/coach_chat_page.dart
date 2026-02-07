@@ -21,8 +21,8 @@ class _CoachChatPageState extends State<CoachChatPage> {
   final ScrollController _scroll = ScrollController();
 
   bool _loading = false;
-  Color get _accent => Color(0xFFFFE0B2);
-  Color get _softBg => Colors.orange.withOpacity(0.10);
+  Color get _accent => Color(0xFFBBDEFB);
+  Color get _softBg => Colors.blue.withOpacity(0.10);
 
 
   final List<Map<String, String>> _messages = [];
@@ -152,8 +152,8 @@ class _CoachChatPageState extends State<CoachChatPage> {
           return OutlinedButton(
             onPressed: () => _sendWithText(text),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.orange,
-              side: BorderSide(color: Colors.orange.withOpacity(0.55)),
+              foregroundColor: Colors.blue,
+              side: BorderSide(color: Colors.blue.withOpacity(0.55)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             ),
@@ -263,10 +263,10 @@ class _CoachChatPageState extends State<CoachChatPage> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.18),
+                  color: Colors.blue.withOpacity(0.18),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.send, color: Colors.orange),
+                child: const Icon(Icons.send, color: Colors.blue),
               ),
             ),
           ],
