@@ -86,10 +86,7 @@ class IeltsSpeakingTestPage extends StatelessWidget {
             style: TextStyle(color: Colors.white70),
           ),
           SizedBox(height: 10),
-          Text(
-            "Time: 4 – 5 minutes",
-            style: TextStyle(color: Colors.white),
-          ),
+          Text("Time: 4 – 5 minutes", style: TextStyle(color: Colors.white)),
         ],
       ),
     );
@@ -115,26 +112,17 @@ class IeltsSpeakingTestPage extends StatelessWidget {
         children: const [
           Text(
             "Question 1",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: primaryBlue,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: primaryBlue),
           ),
           SizedBox(height: 10),
           Text(
             "Can you tell me about your hometown?",
-            style: TextStyle(
-              fontSize: 18,
-              height: 1.5,
-            ),
+            style: TextStyle(fontSize: 18, height: 1.5),
           ),
           SizedBox(height: 14),
           Text(
             "Suggested answer length: 20–30 seconds",
-            style: TextStyle(
-              color: textGrey,
-              fontStyle: FontStyle.italic,
-            ),
+            style: TextStyle(color: textGrey, fontStyle: FontStyle.italic),
           ),
         ],
       ),
@@ -153,10 +141,7 @@ class IeltsSpeakingTestPage extends StatelessWidget {
         children: [
           const Text(
             "Recording",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 12),
 
@@ -174,11 +159,7 @@ class IeltsSpeakingTestPage extends StatelessWidget {
           CircleAvatar(
             radius: 36,
             backgroundColor: recordRed,
-            child: const Icon(
-              Icons.mic,
-              size: 36,
-              color: Colors.white,
-            ),
+            child: const Icon(Icons.mic, size: 36, color: Colors.white),
           ),
 
           const SizedBox(height: 12),
@@ -200,9 +181,7 @@ class IeltsSpeakingTestPage extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const SpeakingResultPage(),
-                ),
+                MaterialPageRoute(builder: (_) => const SpeakingResultPage()),
               );
             },
             style: OutlinedButton.styleFrom(

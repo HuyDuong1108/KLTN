@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'speaking_review_page.dart';
+import '../../../models/speaking_session.dart';
+
 class SpeakingResultPage extends StatelessWidget {
-  const SpeakingResultPage({super.key});
+  final SpeakingSession? session;
+
+  const SpeakingResultPage({super.key, this.session});
 
   // ================= COLORS =================
   static const Color primaryBlue = Color(0xFF1976D2);
@@ -125,10 +129,7 @@ class SpeakingResultPage extends StatelessWidget {
         children: const [
           Text(
             "✔ Strengths",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: successGreen,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: successGreen),
           ),
           SizedBox(height: 6),
           Text(
@@ -140,10 +141,7 @@ class SpeakingResultPage extends StatelessWidget {
           SizedBox(height: 14),
           Text(
             "⚠ Areas to Improve",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: warningOrange,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: warningOrange),
           ),
           SizedBox(height: 6),
           Text(
@@ -186,10 +184,7 @@ class SpeakingResultPage extends StatelessWidget {
             ),
             child: Text(
               value,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -222,12 +217,14 @@ class SpeakingResultPage extends StatelessWidget {
         Expanded(
           child: ElevatedButton.icon(
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const SpeakingReviewPage(),
-                ),
-              );
+              if (session != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SpeakingReviewPage(session: session!),
+                  ),
+                );
+              }
             },
             icon: const Icon(Icons.analytics),
             label: const Text("Review Speaking"),
