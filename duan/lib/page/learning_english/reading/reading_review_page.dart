@@ -1,8 +1,13 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ReadingReviewPage extends StatelessWidget {
-  const ReadingReviewPage({super.key});
+  final String resultId;
+
+  const ReadingReviewPage({super.key, required this.resultId});
 
   // ================= COLORS =================
   static const Color primaryBlue = Color(0xFF1976D2);
@@ -28,21 +33,35 @@ class ReadingReviewPage extends StatelessWidget {
         elevation: 0,
       ),
 
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _summaryCard(),
-          const SizedBox(height: 20),
-          _passageCard(context),
-          const SizedBox(height: 28),
-          _questionReviewSection(),
-        ],
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('reading_results')
+            .doc(resultId)
+            .get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _summaryCard(data),
+              const SizedBox(height: 20),
+              _passageCard(context, data),
+              const SizedBox(height: 28),
+              _questionReviewSection(context, data),
+            ],
+          );
+        },
       ),
     );
   }
 
   // ================= SUMMARY =================
-  Widget _summaryCard() {
+  Widget _summaryCard(Map<String, dynamic> data) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -51,13 +70,13 @@ class ReadingReviewPage extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text("Reading Test 1", style: TextStyle(color: Colors.white70)),
           SizedBox(height: 6),
           Text(
-            "Band 6.5",
+            "Band ${data['band']}",
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -66,7 +85,7 @@ class ReadingReviewPage extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            "Correct: 28 / 40",
+            "Correct: ${data['correct']} / ${data['correct'] + data['incorrect']}",
             style: TextStyle(color: Colors.white),
           ),
         ],
@@ -75,7 +94,54 @@ class ReadingReviewPage extends StatelessWidget {
   }
 
   // ================= PASSAGE =================
-  Widget _passageCard(BuildContext context) {
+  Widget _passageCard(BuildContext context, Map<String, dynamic> data) {
+    final String passage = data['passages'][0]['content'];
+    final List questions = data['questions'];
+
+    List<TextSpan> spans = [];
+    int index = 0;
+
+    for (final q in questions) {
+      if (q['start'] == null || q['end'] == null) continue;
+
+      if (index < q['start']) {
+        spans.add(TextSpan(text: passage.substring(index, q['start'])));
+      }
+
+      spans.add(
+        TextSpan(
+          text: passage.substring(q['start'], q['end']),
+          style: TextStyle(
+            backgroundColor: q['correct'] ? correctGreen : wrongRed,
+          ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () async {
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) =>
+                    const Center(child: CircularProgressIndicator()),
+              );
+
+              final explanation = await _getOrCreateExplanation(
+                resultId: resultId,
+                question: q,
+              );
+
+              Navigator.pop(context); // đóng loading
+
+              _showExplain(context, explanation);
+            },
+        ),
+      );
+
+      index = q['end'];
+    }
+
+    if (index < passage.length) {
+      spans.add(TextSpan(text: passage.substring(index)));
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -84,86 +150,20 @@ class ReadingReviewPage extends StatelessWidget {
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(
-            fontSize: 15,
-            height: 1.6,
-            color: textGrey,
-          ),
-          children: [
-            const TextSpan(
-              text:
-                  "The history of urban transportation reflects the rapid development of cities and the evolving needs of their populations. ",
-            ),
-
-            // ===== CORRECT ANSWER SUPPORT =====
-            TextSpan(
-              text:
-                  "Early forms of transport relied heavily on animal power, particularly horses. ",
-              style: const TextStyle(
-                backgroundColor: correctGreen,
-                fontWeight: FontWeight.w600,
-              ),
-              recognizer: TapGestureRecognizer()
-                ..onTap = () {
-                  _showExplain(
-                    context,
-                    "This sentence explains why animal transport was common in early cities.",
-                  );
-                },
-            ),
-
-            const TextSpan(
-              text:
-                  "These methods were effective for small communities but became increasingly inefficient as cities expanded. ",
-            ),
-
-            // ===== KEYWORD =====
-            TextSpan(
-              text: "inefficient as cities expanded",
-              style: const TextStyle(
-                backgroundColor: keywordYellow,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-
-            const TextSpan(
-              text:
-                  ". The introduction of mechanised transport systems in the 19th century marked a turning point. ",
-            ),
-
-            // ===== WRONG INTERPRETATION =====
-            TextSpan(
-              text:
-                  "Steam-powered trams and railways enabled people to travel greater distances in less time, ",
-              style: const TextStyle(
-                backgroundColor: wrongRed,
-              ),
-              recognizer: TapGestureRecognizer()
-                ..onTap = () {
-                  _showExplain(
-                    context,
-                    "You selected this as the main idea, but this sentence is only an example, not the main focus.",
-                  );
-                },
-            ),
-
-            const TextSpan(
-              text:
-                  "reshaping urban landscapes and influencing where people lived and worked.\n\n",
-            ),
-
-            const TextSpan(
-              text:
-                  "In the modern era, public transportation systems face new challenges, including environmental concerns and population growth.",
-            ),
-          ],
+          style: const TextStyle(fontSize: 15, height: 1.6, color: textGrey),
+          children: spans,
         ),
       ),
     );
   }
 
   // ================= QUESTION REVIEW =================
-  Widget _questionReviewSection() {
+  Widget _questionReviewSection(
+    BuildContext context,
+    Map<String, dynamic> data,
+  ) {
+    final List questions = data['questions'];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -176,28 +176,19 @@ class ReadingReviewPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-
-        _questionReviewCard(
-          number: 1,
-          question: "What is the main focus of the passage?",
-          userAnswer: "A. Decline of rural transport",
-          correctAnswer: "B. Evolution of urban transportation",
-          explanation:
-              "The passage describes how transportation systems changed as cities developed, not rural areas.",
-          skill: "Main idea identification",
-          correct: false,
-        ),
-
-        _questionReviewCard(
-          number: 2,
-          question: "Horses were sufficient for transportation in large cities.",
-          userAnswer: "FALSE",
-          correctAnswer: "FALSE",
-          explanation:
-              "The passage clearly states animal transport became inefficient as cities expanded.",
-          skill: "TRUE / FALSE / NOT GIVEN",
-          correct: true,
-        ),
+        ...questions.map((q) {
+          return _questionReviewCard(
+            number: q['id'],
+            question: q['question'],
+            userAnswer: q['userAnswer'],
+            correctAnswer: q['correctAnswer'],
+            explanation: q['correct']
+                ? "Correct answer based on passage."
+                : "Tap highlighted text to see explanation.",
+            skill: q['type'],
+            correct: q['correct'],
+          );
+        }).toList(),
       ],
     );
   }
@@ -263,10 +254,7 @@ class ReadingReviewPage extends StatelessWidget {
           Text(explanation),
 
           const SizedBox(height: 8),
-          Chip(
-            label: Text(skill),
-            backgroundColor: const Color(0xFFE3F2FD),
-          ),
+          Chip(label: Text(skill), backgroundColor: const Color(0xFFE3F2FD)),
         ],
       ),
     );
@@ -279,9 +267,7 @@ class ReadingReviewPage extends StatelessWidget {
       builder: (_) => AlertDialog(
         title: const Text("Explanation"),
         content: Text(text),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -290,5 +276,78 @@ class ReadingReviewPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<String> _askGeminiExplain(String sentence, String question) async {
+    final model = GenerativeModel(
+      model: 'gemini-pro',
+      apiKey: dotenv.env['GEMINI_API_KEY']!,
+    );
+
+    final prompt =
+        """
+Explain why the following sentence supports or contradicts the answer.
+
+Question: $question
+Sentence: $sentence
+
+Explain in simple IELTS Reading terms.
+""";
+
+    final response = await model.generateContent([Content.text(prompt)]);
+    return response.text ?? "No explanation available.";
+  }
+
+  Future<String> _getOrCreateExplanation({
+    required String resultId,
+    required Map<String, dynamic> question,
+  }) async {
+    if (question['explanation'] != null &&
+        question['explanation'].toString().isNotEmpty) {
+      return question['explanation'];
+    }
+
+    final model = GenerativeModel(
+      model: 'gemini-pro',
+      apiKey: dotenv.env['GEMINI_API_KEY']!,
+    );
+
+    final prompt =
+        '''
+Explain why the correct answer is correct for this IELTS Reading question.
+
+Question:
+${question['question']}
+
+Correct Answer:
+${question['correctAnswer']}
+
+User Answer:
+${question['userAnswer']}
+
+Explain clearly and simply.
+''';
+
+    final response = await model.generateContent([Content.text(prompt)]);
+
+    final explanation = response.text ?? "Explanation not available.";
+
+    final docRef = FirebaseFirestore.instance
+        .collection('reading_results')
+        .doc(resultId);
+
+    final snapshot = await docRef.get();
+    final data = snapshot.data()!;
+    final List questions = List.from(data['questions']);
+
+    final index = questions.indexWhere((q) => q['id'] == question['id']);
+
+    if (index != -1) {
+      questions[index]['explanation'] = explanation;
+
+      await docRef.update({"questions": questions});
+    }
+
+    return explanation;
   }
 }
