@@ -56,6 +56,7 @@ class _WritingPageState extends State<WritingPage> {
 
                   return _writingTestCard(
                     context: context,
+                    testId: doc.id,
                     title: data['title'],
                     completed: false, // 👈 tạm thời
                   );
@@ -117,6 +118,7 @@ class _WritingPageState extends State<WritingPage> {
   // ================= TEST CARD =================
   Widget _writingTestCard({
     required BuildContext context,
+    required String testId,
     required String title,
     required bool completed,
     double? band,
@@ -192,14 +194,12 @@ class _WritingPageState extends State<WritingPage> {
               icon: Icons.play_arrow_rounded,
               color: softBlue,
               onPressed: () {
-                // Navigator.push(
-                //   context,
-                //   MaterialPageRoute(
-                //     builder: (_) => WritingTestPage(
-                //       testId: doc.id, // 👈 thêm sau
-                //     ),
-                //   ),
-                // );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => WritingTestPage(testId: testId),
+                  ),
+                );
               },
             ),
           ],
