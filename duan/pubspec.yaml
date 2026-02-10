@@ -76,6 +76,9 @@ flutter:
     - lib/image/dung.png
     - lib/image/sai.png
     - .env
+    - lib/image/test1_task1.jpg
+    - lib/image/test2_task1.png
+    - lib/image/test3_task1.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

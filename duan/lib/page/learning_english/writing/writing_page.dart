@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
 import 'writing_test_page.dart';
 import 'writing_review_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class WritingPage extends StatelessWidget {
+class WritingPage extends StatefulWidget {
   const WritingPage({super.key});
+
+  @override
+  State<WritingPage> createState() => _WritingPageState();
+}
+
+class _WritingPageState extends State<WritingPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  bool _loading = true;
+  List<DocumentSnapshot> _tests = [];
 
   // ===== COLORS =====
   static const Color primaryBlue = Color(0xFF1976D2);
@@ -26,37 +37,50 @@ class WritingPage extends StatelessWidget {
         ),
       ),
 
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _overviewCard(),
-          const SizedBox(height: 28),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _overviewCard(),
+                const SizedBox(height: 28),
 
-          const Text(
-            "Full Writing Tests",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
+                const Text(
+                  "Full Writing Tests",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
 
-          // ===== DONE =====
-          _writingTestCard(
-            context: context,
-            title: "IELTS Writing Test 1",
-            completed: true,
-            band: 6.5,
-            task1Words: 170,
-            task2Words: 280,
-          ),
+                ..._tests.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
 
-          // ===== NOT DONE =====
-          _writingTestCard(
-            context: context,
-            title: "IELTS Writing Test 2",
-            completed: false,
-          ),
-        ],
-      ),
+                  return _writingTestCard(
+                    context: context,
+                    title: data['title'],
+                    completed: false, // 👈 tạm thời
+                  );
+                }).toList(),
+              ],
+            ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWritingTests();
+  }
+
+  Future<void> _loadWritingTests() async {
+    final snapshot = await _firestore
+        .collection('writing_tests')
+        .orderBy('createdAt')
+        .get();
+
+    setState(() {
+      _tests = snapshot.docs;
+      _loading = false;
+    });
   }
 
   // ================= OVERVIEW =================
@@ -156,8 +180,7 @@ class WritingPage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const WritingReviewPage()),
+                  MaterialPageRoute(builder: (_) => const WritingReviewPage()),
                 );
               },
             ),
@@ -169,11 +192,14 @@ class WritingPage extends StatelessWidget {
               icon: Icons.play_arrow_rounded,
               color: softBlue,
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const WritingTestPage()),
-                );
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (_) => WritingTestPage(
+                //       testId: doc.id, // 👈 thêm sau
+                //     ),
+                //   ),
+                // );
               },
             ),
           ],
