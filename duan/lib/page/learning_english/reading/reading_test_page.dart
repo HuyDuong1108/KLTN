@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'reading_result_page.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 
 class ReadingTestPage extends StatefulWidget {
   final String testId;
@@ -19,11 +20,17 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
   static const Color highlightBlue = Color(0xFFB3E5FC);
   static const Color highlightGreen = Color(0xFFC8E6C9);
   static const Color highlightPurple = Color(0xFFE1BEE7); // THÊM MÀU TÍM
-static const Color highlightOrange = Color(0xFFFFE0B2);
+  static const Color highlightOrange = Color(0xFFFFE0B2);
   static const Color bgColor = Color(0xFFF6FAFF);
   static const Color textGrey = Color(0xFF455A64);
 
   // ================= STATE =================
+
+  Timer? _timer;
+  int _remainingSeconds = 0;
+  bool _timerStarted = false;
+
+  int _durationMinutes = 60; // fallback nếu Firestore thiếu
 
   final Map<int, List<TextMark>> passageMarks = {};
   int? currentPassageIndex;
@@ -50,6 +57,20 @@ static const Color highlightOrange = Color(0xFFFFE0B2);
           "IELTS Reading Test",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Text(
+                _formatTime(_remainingSeconds),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.redAccent,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
 
       // ================= BODY =================
@@ -94,12 +115,191 @@ static const Color highlightOrange = Color(0xFFFFE0B2);
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadTestAndStartTimer();
+  }
+
+  Future<void> _loadTestAndStartTimer() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('reading_tests')
+        .doc(widget.testId)
+        .get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data()!;
+
+    final int duration = (data['duration'] is int && data['duration'] > 0)
+        ? data['duration']
+        : _durationMinutes;
+
+    _startTimer(duration);
+  }
+
+  void _startTimer(int minutes) {
+    if (_timerStarted) return;
+
+    _remainingSeconds = minutes * 60;
+    _timerStarted = true;
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds <= 0) {
+        timer.cancel();
+        _autoSubmit();
+      } else {
+        setState(() {
+          _remainingSeconds--;
+        });
+      }
+    });
+  }
+
+  String _formatTime(int seconds) {
+    if (seconds <= 0) return "00:00";
+    final int m = seconds ~/ 60;
+    final int s = seconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _autoSubmit() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('reading_tests')
+        .doc(widget.testId)
+        .get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data()!;
+    final passages = data['passages'];
+
+    final userAnswers = _collectUserAnswers();
+    final result = _calculateResult(userAnswers, passages);
+
+    final docRef = FirebaseFirestore.instance
+        .collection('reading_results')
+        .doc();
+
+    await docRef.set({
+      "testId": widget.testId,
+      "submittedAt": FieldValue.serverTimestamp(),
+      "durationUsed": (_durationMinutes * 60) - _remainingSeconds,
+      "totalQuestions": result['correct'] + result['incorrect'],
+      "correct": result['correct'],
+      "incorrect": result['incorrect'],
+      "accuracy": result['accuracy'],
+      "band": result['band'],
+      "typeScore": result['typeScore'],
+      "answers": userAnswers,
+      "questions": result['questionResults'],
+      "passages": passages,
+    });
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => ReadingResultPage(resultId: docRef.id)),
+    );
+  }
+
+  @override
   void dispose() {
+    _timer?.cancel();
     _focusNode.dispose();
     for (var controller in sentenceControllers.values) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  Map<String, String> _collectUserAnswers() {
+    final Map<String, String> result = {};
+
+    // MCQ + TFNG
+    answers.forEach((key, value) {
+      if (value != null) {
+        result[key.toString()] = value!;
+      }
+    });
+
+    // SENTENCE
+    sentenceControllers.forEach((key, controller) {
+      result[key.toString()] = controller.text.trim();
+    });
+
+    return result;
+  }
+
+  Map<String, dynamic> _calculateResult(
+    Map<String, String> userAnswers,
+    List passages,
+  ) {
+    int correct = 0;
+    Map<String, Map<String, int>> typeScore = {};
+
+    List<Map<String, dynamic>> questionResults = [];
+
+    for (final passage in passages) {
+      for (final q in passage['questions']) {
+        final String id = q['id'].toString();
+        final String correctAnswer = q['correctAnswer']
+            .toString()
+            .toLowerCase()
+            .trim();
+
+        final String userAnswer = (userAnswers[id] ?? '').toLowerCase().trim();
+
+        final bool isCorrect =
+            userAnswer.isNotEmpty && userAnswer == correctAnswer;
+
+        if (isCorrect) correct++;
+
+        final String type = q['type'];
+        typeScore.putIfAbsent(type, () => {"correct": 0, "total": 0});
+
+        typeScore[type]!["total"] = typeScore[type]!["total"]! + 1;
+
+        if (isCorrect) {
+          typeScore[type]!["correct"] = typeScore[type]!["correct"]! + 1;
+        }
+
+        questionResults.add({
+          "id": q['id'],
+          "type": q['type'],
+          "question": q['question'],
+          "userAnswer": userAnswer,
+          "correctAnswer": correctAnswer,
+          "correct": isCorrect,
+          "passageIndex": passage['index'] ?? 0,
+          "start": q['start'], // nếu có
+          "end": q['end'], // nếu có
+        });
+      }
+    }
+
+    final int total = questionResults.length;
+    final int incorrect = total - correct;
+    final double accuracy = correct / total;
+
+    double band;
+    if (correct >= 30)
+      band = 7.0;
+    else if (correct >= 26)
+      band = 6.5;
+    else if (correct >= 23)
+      band = 6.0;
+    else
+      band = 5.5;
+
+    return {
+      "correct": correct,
+      "incorrect": incorrect,
+      "accuracy": accuracy,
+      "band": band,
+      "typeScore": typeScore,
+      "questionResults": questionResults,
+    };
   }
 
   // ================= HEADER =================
@@ -133,206 +333,202 @@ static const Color highlightOrange = Color(0xFFFFE0B2);
   }
 
   // ================= PASSAGE =================
-Widget _readingPassage(String passageText, int passageIndex) {
-  return Container(
-    padding: const EdgeInsets.all(16),
-    margin: const EdgeInsets.only(bottom: 16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Listener(
-      onPointerUp: (event) {
-        // Lưu vị trí pointer
-        selectionPosition = event.position;
-        
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (currentSelection != null &&
-              currentSelection!.start != currentSelection!.end &&
-              !isMenuOpen) {
-            setState(() {
-              isMenuOpen = true;
-              currentPassageIndex = passageIndex;
-            });
-            _showFloatingHighlightMenu();
-          }
-        });
-      },
-      child: SelectableText.rich(
-        _buildHighlightedText(passageText, passageIndex),
-        style: const TextStyle(fontSize: 15, height: 1.6, color: textGrey),
-        onSelectionChanged: (selection, cause) {
-          setState(() {
-            currentSelection = selection;
-            currentPassageIndex = passageIndex;
+  Widget _readingPassage(String passageText, int passageIndex) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Listener(
+        onPointerUp: (event) {
+          // Lưu vị trí pointer
+          selectionPosition = event.position;
+
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (currentSelection != null &&
+                currentSelection!.start != currentSelection!.end &&
+                !isMenuOpen) {
+              setState(() {
+                isMenuOpen = true;
+                currentPassageIndex = passageIndex;
+              });
+              _showFloatingHighlightMenu();
+            }
           });
         },
+        child: SelectableText.rich(
+          _buildHighlightedText(passageText, passageIndex),
+          style: const TextStyle(fontSize: 15, height: 1.6, color: textGrey),
+          onSelectionChanged: (selection, cause) {
+            setState(() {
+              currentSelection = selection;
+              currentPassageIndex = passageIndex;
+            });
+          },
+        ),
       ),
-    ),
-  );
-}
-// ================= FLOATING HIGHLIGHT MENU =================
-void _showFloatingHighlightMenu() {
-  if (selectionPosition == null) return;
+    );
+  }
 
-  final overlay = Overlay.of(context);
-  OverlayEntry? overlayEntry;
+  // ================= FLOATING HIGHLIGHT MENU =================
+  void _showFloatingHighlightMenu() {
+    if (selectionPosition == null) return;
 
-  overlayEntry = OverlayEntry(
-    builder: (context) => Positioned(
-      left: selectionPosition!.dx - 180,
-      top: selectionPosition!.dy - 80, // Hiển thị phía trên vị trí bôi đen
-      child: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: primaryBlue.withOpacity(0.2), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // // Tiêu đề
-              // Container(
-              //   padding: const EdgeInsets.symmetric(horizontal: 8),
-              //   child: Row(
-              //     children: [
-              //       Icon(Icons.palette, size: 18, color: primaryBlue),
-              //       const SizedBox(width: 6),
-              //       const Text(
-              //         "Highlight",
-              //         style: TextStyle(
-              //           fontSize: 13,
-              //           fontWeight: FontWeight.w600,
-              //           color: textGrey,
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
-              
-              // const SizedBox(width: 8),
-              
-              // // Divider dọc
-              // Container(
-              //   height: 30,
-              //   width: 1,
-              //   color: Colors.grey.shade300,
-              // ),
-              
-              // const SizedBox(width: 8),
-              
-              // Các nút màu
-              _floatingColorButton(highlightYellow, overlayEntry),
-              const SizedBox(width: 6),
-              _floatingColorButton(highlightBlue, overlayEntry),
-              const SizedBox(width: 6),
-              _floatingColorButton(highlightGreen, overlayEntry),
-              const SizedBox(width: 6),
-              _floatingColorButton(highlightPurple, overlayEntry),
-              const SizedBox(width: 6),
-              _floatingColorButton(highlightOrange, overlayEntry),
-              
-              const SizedBox(width: 8),
-              
-              // Divider dọc
-              Container(
-                height: 30,
-                width: 1,
-                color: Colors.grey.shade300,
-              ),
-              
-              const SizedBox(width: 4),
-              
-              // Nút đóng
-              IconButton(
-                icon: const Icon(Icons.close, size: 18),
-                onPressed: () {
-                  overlayEntry?.remove();
-                  setState(() {
-                    isMenuOpen = false;
-                    currentSelection = null;
-                  });
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                color: Colors.grey.shade600,
-              ),
-            ],
+    final overlay = Overlay.of(context);
+    OverlayEntry? overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: selectionPosition!.dx - 180,
+        top: selectionPosition!.dy - 80, // Hiển thị phía trên vị trí bôi đen
+        child: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: primaryBlue.withOpacity(0.2), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // // Tiêu đề
+                // Container(
+                //   padding: const EdgeInsets.symmetric(horizontal: 8),
+                //   child: Row(
+                //     children: [
+                //       Icon(Icons.palette, size: 18, color: primaryBlue),
+                //       const SizedBox(width: 6),
+                //       const Text(
+                //         "Highlight",
+                //         style: TextStyle(
+                //           fontSize: 13,
+                //           fontWeight: FontWeight.w600,
+                //           color: textGrey,
+                //         ),
+                //       ),
+                //     ],
+                //   ),
+                // ),
+
+                // const SizedBox(width: 8),
+
+                // // Divider dọc
+                // Container(
+                //   height: 30,
+                //   width: 1,
+                //   color: Colors.grey.shade300,
+                // ),
+
+                // const SizedBox(width: 8),
+
+                // Các nút màu
+                _floatingColorButton(highlightYellow, overlayEntry),
+                const SizedBox(width: 6),
+                _floatingColorButton(highlightBlue, overlayEntry),
+                const SizedBox(width: 6),
+                _floatingColorButton(highlightGreen, overlayEntry),
+                const SizedBox(width: 6),
+                _floatingColorButton(highlightPurple, overlayEntry),
+                const SizedBox(width: 6),
+                _floatingColorButton(highlightOrange, overlayEntry),
+
+                const SizedBox(width: 8),
+
+                // Divider dọc
+                Container(height: 30, width: 1, color: Colors.grey.shade300),
+
+                const SizedBox(width: 4),
+
+                // Nút đóng
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () {
+                    overlayEntry?.remove();
+                    setState(() {
+                      isMenuOpen = false;
+                      currentSelection = null;
+                    });
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  color: Colors.grey.shade600,
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
 
-  overlay.insert(overlayEntry);
-}
-// ================= FLOATING COLOR BUTTON =================
-Widget _floatingColorButton(Color color, OverlayEntry? overlayEntry) {
-  return GestureDetector(
-    onTap: () {
-      if (currentSelection != null && currentPassageIndex != null) {
-        // Khởi tạo list nếu chưa có
-        if (!passageMarks.containsKey(currentPassageIndex)) {
-          passageMarks[currentPassageIndex!] = [];
+    overlay.insert(overlayEntry);
+  }
+
+  // ================= FLOATING COLOR BUTTON =================
+  Widget _floatingColorButton(Color color, OverlayEntry? overlayEntry) {
+    return GestureDetector(
+      onTap: () {
+        if (currentSelection != null && currentPassageIndex != null) {
+          // Khởi tạo list nếu chưa có
+          if (!passageMarks.containsKey(currentPassageIndex)) {
+            passageMarks[currentPassageIndex!] = [];
+          }
+
+          // Thêm mark vào passage tương ứng
+          passageMarks[currentPassageIndex!]!.add(
+            TextMark(
+              start: currentSelection!.start,
+              end: currentSelection!.end,
+              color: color,
+            ),
+          );
+
+          // Đóng overlay
+          overlayEntry?.remove();
+
+          // Update UI
+          setState(() {
+            isMenuOpen = false;
+            currentSelection = null;
+          });
         }
-        
-        // Thêm mark vào passage tương ứng
-        passageMarks[currentPassageIndex!]!.add(
-          TextMark(
-            start: currentSelection!.start,
-            end: currentSelection!.end,
-            color: color,
-          ),
-        );
-        
-        // Đóng overlay
-        overlayEntry?.remove();
-        
-        // Update UI
-        setState(() {
-          isMenuOpen = false;
-          currentSelection = null;
-        });
-      }
-    },
-    child: Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.grey.shade300,
-          width: 2,
+      },
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey.shade300, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.3),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        child: Icon(
+          Icons.check,
+          size: 16,
+          color: Colors.black.withOpacity(0.6),
+        ),
       ),
-      child: Icon(
-        Icons.check,
-        size: 16,
-        color: Colors.black.withOpacity(0.6),
-      ),
-    ),
-  );
-}
+    );
+  }
+
   // ================= BUILD HIGHLIGHTED TEXT =================
   TextSpan _buildHighlightedText(String text, int passageIndex) {
     // Kiểm tra an toàn
@@ -492,15 +688,41 @@ Widget _floatingColorButton(Color color, OverlayEntry? overlayEntry) {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(backgroundColor: primaryBlue),
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ReadingResultPage()),
-          );
+          _showSubmitDialog();
         },
+
         child: const Text(
           "Submit Reading Test",
           style: TextStyle(color: Colors.white),
         ),
+      ),
+    );
+  }
+
+  void _showSubmitDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Submit Reading Test"),
+        content: const Text(
+          "Are you sure you want to submit your answers?\n"
+          "You cannot change them after submission.",
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _autoSubmit(); // 🔥 DUY NHẤT chỗ điều hướng
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: primaryBlue),
+            child: const Text("Submit", style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
