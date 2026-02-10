@@ -243,7 +243,7 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
     for (final passage in passages) {
       for (final q in passage['questions']) {
         final String id = q['id'].toString();
-        final String correctAnswer = q['correctAnswer']
+        final String correctAnswer = q['answer']
             .toString()
             .toLowerCase()
             .trim();
@@ -274,6 +274,7 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
           "passageIndex": passage['index'] ?? 0,
           "start": q['start'], // nếu có
           "end": q['end'], // nếu có
+          "explanation": null,
         });
       }
     }

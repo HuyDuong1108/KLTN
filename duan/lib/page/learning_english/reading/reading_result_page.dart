@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'reading_review_page.dart';
 
 class ReadingResultPage extends StatelessWidget {
   final String resultId;
@@ -295,14 +296,14 @@ class ReadingResultPage extends StatelessWidget {
     height: 40,
     child: ElevatedButton.icon(
       onPressed: () {
-        // Navigator.push(
-        //         context,
-        //         MaterialPageRoute(
-        //           builder: (_) => ReadingReviewPage(
-        //             resultId: resultId,
-        //           ),
-        //         ),
-        //       );
+        Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ReadingReviewPage(
+                    resultId: resultId,
+                  ),
+                ),
+              );
       },
       icon: const Icon(Icons.analytics, size: 18, color: Colors.white),
       label: const Text(
