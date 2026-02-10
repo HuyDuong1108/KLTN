@@ -1,8 +1,7 @@
-import 'package:flutter/gestures.dart';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'reading_result_page.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:async';
 
 class ReadingTestPage extends StatefulWidget {
@@ -174,7 +173,7 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
     final passages = data['passages'];
 
     final userAnswers = _collectUserAnswers();
-    final result = _calculateResult(userAnswers, passages);
+    final result = await _calculateResult(userAnswers, passages);
 
     final docRef = FirebaseFirestore.instance
         .collection('reading_results')
@@ -240,10 +239,12 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
 
     List<Map<String, dynamic>> questionResults = [];
 
-    for (final passage in passages) {
+    for (int pIndex = 0; pIndex < passages.length; pIndex++) {
+      final passage = passages[pIndex];
+
       for (final q in passage['questions']) {
         final String id = q['id'].toString();
-        final String correctAnswer = q['answer']
+        final String correctAnswer = (q['answer'] ?? '')
             .toString()
             .toLowerCase()
             .trim();
@@ -264,6 +265,9 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
           typeScore[type]!["correct"] = typeScore[type]!["correct"]! + 1;
         }
 
+        final String explanation = q['explanation'] ?? '';
+        final Map<String, dynamic>? evidence = q['evidence'];
+
         questionResults.add({
           "id": q['id'],
           "type": q['type'],
@@ -271,10 +275,12 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
           "userAnswer": userAnswer,
           "correctAnswer": correctAnswer,
           "correct": isCorrect,
-          "passageIndex": passage['index'] ?? 0,
+          "passageIndex": pIndex,
           "start": q['start'], // nếu có
           "end": q['end'], // nếu có
-          "explanation": null,
+          "explanation": explanation,
+          "start": evidence?['start'],
+          "end": evidence?['end'],
         });
       }
     }

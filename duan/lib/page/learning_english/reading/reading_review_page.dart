@@ -1,8 +1,5 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ReadingReviewPage extends StatelessWidget {
   final String resultId;
@@ -44,15 +41,35 @@ class ReadingReviewPage extends StatelessWidget {
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
+          final List passages = data['passages'];
+          final List allQuestions = data['questions'];
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               _summaryCard(data),
               const SizedBox(height: 20),
-              _passageCard(context, data),
-              const SizedBox(height: 28),
-              _questionReviewSection(context, data),
+
+              ...passages.asMap().entries.map((entry) {
+                final int pIndex = entry.key;
+                final passage = entry.value;
+
+                final passageQuestions = allQuestions
+                    .where((q) => q['passageIndex'] == pIndex)
+                    .toList();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _passageTitle(pIndex + 1),
+                    const SizedBox(height: 12),
+                    _passageCard(context, passage, passageQuestions),
+                    const SizedBox(height: 20),
+                    _questionReviewSection(passageQuestions),
+                    const SizedBox(height: 32),
+                  ],
+                );
+              }).toList(),
             ],
           );
         },
@@ -73,7 +90,7 @@ class ReadingReviewPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Reading Test 1", style: TextStyle(color: Colors.white70)),
+          Text("Reading Test", style: TextStyle(color: Colors.white70)),
           SizedBox(height: 6),
           Text(
             "Band ${data['band']}",
@@ -92,78 +109,88 @@ class ReadingReviewPage extends StatelessWidget {
       ),
     );
   }
+  String _displaySkillName(String type) {
+  switch (type) {
+    case 'MCQ':
+      return 'Multiple Choice';
+    case 'TFNG':
+      return 'True / False / Not Given';
+    case 'SENTENCE':
+      return 'Sentence Completion';
+    default:
+      return type;
+  }
+}
+
 
   // ================= PASSAGE =================
-  Widget _passageCard(BuildContext context, Map<String, dynamic> data) {
-    final String passage = data['passages'][0]['content'];
-    final List questions = data['questions'];
+  Widget _passageCard(
+  BuildContext context,
+  Map<String, dynamic> passage,
+  List questions,
+) {
+  final String content = passage['content'] ?? '';
 
-    List<TextSpan> spans = [];
-    int index = 0;
+  final sortedQuestions = questions
+      .where((q) => q['start'] != null && q['end'] != null)
+      .toList()
+    ..sort((a, b) => a['start'].compareTo(b['start']));
 
-    for (final q in questions) {
-      if (q['start'] == null || q['end'] == null) continue;
+  List<TextSpan> spans = [];
+  int index = 0;
 
-      if (index < q['start']) {
-        spans.add(TextSpan(text: passage.substring(index, q['start'])));
-      }
+  for (final q in sortedQuestions) {
+    final int start = q['start'];
+    final int end = q['end'];
 
-      spans.add(
-        TextSpan(
-          text: passage.substring(q['start'], q['end']),
-          style: TextStyle(
-            backgroundColor: q['correct'] ? correctGreen : wrongRed,
-          ),
-          recognizer: TapGestureRecognizer()
-            ..onTap = () async {
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
+    if (index < start) {
+      spans.add(TextSpan(text: content.substring(index, start)));
+    }
 
-              final explanation = await _getOrCreateExplanation(
-                resultId: resultId,
-                question: q,
-              );
-
-              Navigator.pop(context); // đóng loading
-
-              _showExplain(context, explanation);
-            },
+    spans.add(
+      TextSpan(
+        text: content.substring(start, end),
+        style: TextStyle(
+          backgroundColor: q['correct'] ? correctGreen : wrongRed,
         ),
-      );
-
-      index = q['end'];
-    }
-
-    if (index < passage.length) {
-      spans.add(TextSpan(text: passage.substring(index)));
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
       ),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(fontSize: 15, height: 1.6, color: textGrey),
-          children: spans,
-        ),
+    );
+
+    index = end;
+  }
+
+  if (index < content.length) {
+    spans.add(TextSpan(text: content.substring(index)));
+  }
+
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: RichText(
+      text: TextSpan(
+        style: const TextStyle(fontSize: 15, height: 1.6, color: textGrey),
+        children: spans,
+      ),
+    ),
+  );
+}
+
+  Widget _passageTitle(int index) {
+    return Text(
+      "Reading Passage $index",
+      style: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: primaryBlue,
       ),
     );
   }
 
   // ================= QUESTION REVIEW =================
-  Widget _questionReviewSection(
-    BuildContext context,
-    Map<String, dynamic> data,
-  ) {
-    final List questions = data['questions'];
-
+  Widget _questionReviewSection(List questions) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -182,10 +209,12 @@ class ReadingReviewPage extends StatelessWidget {
             question: q['question'],
             userAnswer: q['userAnswer'],
             correctAnswer: q['correctAnswer'],
-            explanation: q['correct']
-                ? "Correct answer based on passage."
-                : "Tap highlighted text to see explanation.",
-            skill: q['type'],
+            explanation: q['explanation']?.toString().trim().isNotEmpty == true
+    ? q['explanation']
+    : "No explanation available.",
+
+            skill: _displaySkillName(q['type']),
+
             correct: q['correct'],
           );
         }).toList(),
@@ -260,94 +289,4 @@ class ReadingReviewPage extends StatelessWidget {
     );
   }
 
-  // ================= EXPLANATION POPUP =================
-  void _showExplain(BuildContext context, String text) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Explanation"),
-        content: Text(text),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<String> _askGeminiExplain(String sentence, String question) async {
-    final model = GenerativeModel(
-      model: 'gemini-pro',
-      apiKey: dotenv.env['GEMINI_API_KEY']!,
-    );
-
-    final prompt =
-        """
-Explain why the following sentence supports or contradicts the answer.
-
-Question: $question
-Sentence: $sentence
-
-Explain in simple IELTS Reading terms.
-""";
-
-    final response = await model.generateContent([Content.text(prompt)]);
-    return response.text ?? "No explanation available.";
-  }
-
-  Future<String> _getOrCreateExplanation({
-    required String resultId,
-    required Map<String, dynamic> question,
-  }) async {
-    if (question['explanation'] != null &&
-        question['explanation'].toString().isNotEmpty) {
-      return question['explanation'];
-    }
-
-    final model = GenerativeModel(
-      model: 'gemini-pro',
-      apiKey: dotenv.env['GEMINI_API_KEY']!,
-    );
-
-    final prompt =
-        '''
-Explain why the correct answer is correct for this IELTS Reading question.
-
-Question:
-${question['question']}
-
-Correct Answer:
-${question['correctAnswer']}
-
-User Answer:
-${question['userAnswer']}
-
-Explain clearly and simply.
-''';
-
-    final response = await model.generateContent([Content.text(prompt)]);
-
-    final explanation = response.text ?? "Explanation not available.";
-
-    final docRef = FirebaseFirestore.instance
-        .collection('reading_results')
-        .doc(resultId);
-
-    final snapshot = await docRef.get();
-    final data = snapshot.data()!;
-    final List questions = List.from(data['questions']);
-
-    final index = questions.indexWhere((q) => q['id'] == question['id']);
-
-    if (index != -1) {
-      questions[index]['explanation'] = explanation;
-
-      await docRef.update({"questions": questions});
-    }
-
-    return explanation;
-  }
 }

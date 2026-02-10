@@ -39,10 +39,11 @@ Future<void> seedReadingTests() async {
   final batch = firestore.batch();
 
   final tests = [
-    _testUrbanTransport(),
-    _testWildlifeConservation(),
-    _testHumanMemory(),
-  ];
+  _attachExplainAndEvidence(_testUrbanTransport()),
+  _attachExplainAndEvidence(_testWildlifeConservation()),
+  _attachExplainAndEvidence(_testHumanMemory()),
+];
+
 
   for (var test in tests) {
     final ref =
@@ -306,6 +307,121 @@ Map<String, dynamic> _testHumanMemory() {
     ]
   };
 }
+/* ============================================================
+   EXPLANATION + EVIDENCE SEEDING
+============================================================ */
+
+Map<String, dynamic> _extractEvidence({
+  required String passage,
+  required String answer,
+}) {
+  final lowerPassage = passage.toLowerCase();
+  final lowerAnswer = answer.toLowerCase();
+
+  int index = lowerPassage.indexOf(lowerAnswer);
+
+  // Nếu không tìm thấy keyword → fallback lấy câu đầu
+  if (index == -1) {
+    final end = passage.indexOf('.');
+    return {
+      "text": passage.substring(0, end + 1),
+      "start": 0,
+      "end": end + 1,
+    };
+  }
+
+  int start = index;
+  int end = index + answer.length;
+
+  // Mở rộng ra đầu câu
+  while (start > 0 &&
+      passage[start] != '.' &&
+      passage[start] != '\n') {
+    start--;
+  }
+
+  // Mở rộng ra cuối câu
+  while (end < passage.length &&
+      passage[end] != '.' &&
+      passage[end] != '\n') {
+    end++;
+  }
+
+  return {
+    "text": passage.substring(start, end + 1).trim(),
+    "start": start,
+    "end": end + 1,
+  };
+}
+
+String _generateExplanation({
+  required String type,
+  required String question,
+  required String answer,
+  required String evidenceText,
+}) {
+  switch (type) {
+    case "MCQ":
+      return
+          "The passage directly addresses this question. "
+          "The correct option is supported by the following sentence:\n\n"
+          "\"$evidenceText\"\n\n"
+          "This information matches the requirement of the question, while the other options "
+          "are not supported by the passage.";
+
+    case "TFNG":
+      if (answer == "TRUE") {
+        return
+            "The statement is TRUE because the passage explicitly confirms this idea. "
+            "The evidence states:\n\n"
+            "\"$evidenceText\"";
+      } else if (answer == "FALSE") {
+        return
+            "The statement is FALSE because it contradicts the information in the passage. "
+            "According to the text:\n\n"
+            "\"$evidenceText\"";
+      } else {
+        return
+            "The statement is NOT GIVEN because the passage does not mention this information. "
+            "There is no evidence in the text to confirm or contradict the statement.";
+      }
+
+    case "SENTENCE":
+      return
+          "The missing word can be identified directly from the passage. "
+          "The relevant part of the text states:\n\n"
+          "\"$evidenceText\"\n\n"
+          "This confirms the correct completion of the sentence.";
+
+    default:
+      return "Explanation not available.";
+  }
+}
+
+Map<String, dynamic> _attachExplainAndEvidence(
+    Map<String, dynamic> test) {
+  for (final passage in test['passages']) {
+    final String content = passage['content'];
+
+    for (final q in passage['questions']) {
+      final evidence = _extractEvidence(
+        passage: content,
+        answer: q['answer'],
+      );
+
+      q['evidence'] = evidence;
+
+      q['explanation'] = _generateExplanation(
+        type: q['type'],
+        question: q['question'],
+        answer: q['answer'],
+        evidenceText: evidence['text'],
+      );
+    }
+  }
+  return test;
+}
+
 
 /* ============================================================
    HELPERS
