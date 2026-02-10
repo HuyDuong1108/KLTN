@@ -31,130 +31,126 @@ class ReadingPage extends StatelessWidget {
 
       // ================= BODY =================
       body: StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance
-      .collection('reading_tests')
-      .orderBy('id')
-      .snapshots(),
-  builder: (context, snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-      return const Center(child: Text("No reading tests found"));
-    }
-
-    final tests = snapshot.data!.docs;
-
-    // ===== LOAD READING RESULTS (Y CHANG LISTENING) =====
-    return FutureBuilder<QuerySnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('reading_results')
-          .orderBy('submittedAt', descending: true)
-          .get(),
-      builder: (context, resultSnapshot) {
-        if (!resultSnapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final results = resultSnapshot.data!.docs;
-
-        // Map lưu latest result theo testId
-        final Map<String, Map<String, dynamic>> latestResultByTest = {};
-
-        for (final doc in results) {
-          final data = doc.data() as Map<String, dynamic>;
-          final testId = data['testId'];
-
-          if (!latestResultByTest.containsKey(testId)) {
-            latestResultByTest[testId] = {
-              ...data,
-              'id': doc.id,
-            };
+        stream: FirebaseFirestore.instance
+            .collection('reading_tests')
+            .orderBy('id')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
           }
-        }
 
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _overviewCard(
-              completed: latestResultByTest.length,
-              total: tests.length,
-              averageBand: latestResultByTest.isEmpty
-                  ? 0
-                  : latestResultByTest.values
-                          .map((e) => (e['band'] ?? 0).toDouble())
-                          .reduce((a, b) => a + b) /
-                      latestResultByTest.length,
-            ),
-            const SizedBox(height: 28),
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No reading tests found"));
+          }
 
-            const Text(
-              "Full Reading Tests",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
+          final tests = snapshot.data!.docs;
 
-            ...tests.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              final result = latestResultByTest[doc.id];
+          // ===== LOAD READING RESULTS (Y CHANG LISTENING) =====
+          return FutureBuilder<QuerySnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('reading_results')
+                .orderBy('submittedAt', descending: true)
+                .get(),
+            builder: (context, resultSnapshot) {
+              if (!resultSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-              return _readingTestCard(
-                context: context,
-                testId: doc.id,
-                title: data['title'],
-                totalQuestions: data['totalQuestions'],
-                duration: data['duration'],
-                completed: result != null,
-                correct: result?['correct'],
-                band: result?['band'],
-                resultId: result?['id'],
+              final results = resultSnapshot.data!.docs;
+
+              // Map lưu latest result theo testId
+              final Map<String, Map<String, dynamic>> latestResultByTest = {};
+
+              for (final doc in results) {
+                final data = doc.data() as Map<String, dynamic>;
+                final testId = data['testId'];
+
+                if (!latestResultByTest.containsKey(testId)) {
+                  latestResultByTest[testId] = {...data, 'id': doc.id};
+                }
+              }
+
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _overviewCard(
+                    completed: latestResultByTest.length,
+                    total: tests.length,
+                    averageBand: latestResultByTest.isEmpty
+                        ? 0
+                        : latestResultByTest.values
+                                  .map((e) => (e['band'] ?? 0).toDouble())
+                                  .reduce((a, b) => a + b) /
+                              latestResultByTest.length,
+                  ),
+                  const SizedBox(height: 28),
+
+                  const Text(
+                    "Full Reading Tests",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+
+                  ...tests.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final result = latestResultByTest[doc.id];
+
+                    return _readingTestCard(
+                      context: context,
+                      testId: doc.id,
+                      title: data['title'],
+                      totalQuestions: data['totalQuestions'],
+                      duration: data['duration'],
+                      completed: result != null,
+                      correct: result?['correct'],
+                      band: result?['band'],
+                      resultId: result?['id'],
+                    );
+                  }).toList(),
+                ],
               );
-            }).toList(),
-          ],
-        );
-      },
-    );
-  },
-),
-
+            },
+          );
+        },
+      ),
     );
   }
 
   // ================= OVERVIEW =================
   Widget _overviewCard({
-  required int completed,
-  required int total,
-  required double averageBand,
-}) {
-  return Container(
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(20),
-      gradient: const LinearGradient(
-        colors: [Color(0xFFBBDEFB), Color(0xFFE3F2FD)],
-      ),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.menu_book, size: 40, color: primaryBlue),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Reading Progress",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text("Completed: $completed / $total"),
-            Text("Average Band: ${averageBand.toStringAsFixed(1)}"),
-          ],
+    required int completed,
+    required int total,
+    required double averageBand,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFBBDEFB), Color(0xFFE3F2FD)],
         ),
-      ],
-    ),
-  );
-}
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.menu_book, size: 40, color: primaryBlue),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Reading Progress",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text("Completed: $completed / $total"),
+              Text("Average Band: ${averageBand.toStringAsFixed(1)}"),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   // ================= TEST CARD =================
   Widget _readingTestCard({
@@ -188,10 +184,7 @@ class ReadingPage extends StatelessWidget {
           // ===== TITLE =====
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 10),
@@ -217,85 +210,87 @@ class ReadingPage extends StatelessWidget {
 
           // ===== STATE =====
           if (completed) ...[
-  Row(
-    children: [
-      _infoChip("Correct: $correct / $totalQuestions"),
-      const SizedBox(width: 8),
-      _infoChip("Band: ${band?.toStringAsFixed(1)}"),
-    ],
-  ),
-  const SizedBox(height: 14),
+            Row(
+              children: [
+                _infoChip("Correct: $correct / $totalQuestions"),
+                const SizedBox(width: 8),
+                _infoChip("Band: ${band?.toStringAsFixed(1)}"),
+              ],
+            ),
+            const SizedBox(height: 14),
 
-  Row(
-    children: [
-      // ===== REVIEW =====
-      Expanded(
-        child: SizedBox(
-          height: 48,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      ReadingReviewPage(resultId: resultId!),
+            Row(
+              children: [
+                // ===== REVIEW =====
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ReadingReviewPage(resultId: resultId!),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.analytics_outlined, size: 22),
+                      label: const Text(
+                        "Review",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryBlue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              );
-            },
-            icon: const Icon(Icons.analytics_outlined, size: 22),
-            label: const Text(
-              "Review",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-        ),
-      ),
 
-      const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-      // ===== TEST AGAIN =====
-      Expanded(
-        child: SizedBox(
-          height: 48,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ReadingTestPage(testId: testId),
+                // ===== TEST AGAIN =====
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ReadingTestPage(testId: testId),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.refresh, size: 22),
+                      label: const Text(
+                        "Test Again",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: softBlue,
+                        side: BorderSide(color: softBlue, width: 1.6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              );
-            },
-            icon: const Icon(Icons.refresh, size: 22),
-            label: const Text(
-              "Test Again",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ],
             ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: softBlue,
-              side: BorderSide(color: softBlue, width: 1.6),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ],
-  ),
-]
- else ...[
-            const Text(
-              "Not attempted",
-              style: TextStyle(color: textGrey),
-            ),
+          ] else ...[
+            const Text("Not attempted", style: TextStyle(color: textGrey)),
             const SizedBox(height: 14),
             _primaryButton(
               text: "Start Test",
@@ -326,10 +321,7 @@ class ReadingPage extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          color: primaryBlue,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w600, color: primaryBlue),
       ),
     );
   }
