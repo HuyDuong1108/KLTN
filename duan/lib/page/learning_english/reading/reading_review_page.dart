@@ -109,74 +109,73 @@ class ReadingReviewPage extends StatelessWidget {
       ),
     );
   }
-  String _displaySkillName(String type) {
-  switch (type) {
-    case 'MCQ':
-      return 'Multiple Choice';
-    case 'TFNG':
-      return 'True / False / Not Given';
-    case 'SENTENCE':
-      return 'Sentence Completion';
-    default:
-      return type;
-  }
-}
 
+  String _displaySkillName(String type) {
+    switch (type) {
+      case 'MCQ':
+        return 'Multiple Choice';
+      case 'TFNG':
+        return 'True / False / Not Given';
+      case 'SENTENCE':
+        return 'Sentence Completion';
+      default:
+        return type;
+    }
+  }
 
   // ================= PASSAGE =================
   Widget _passageCard(
-  BuildContext context,
-  Map<String, dynamic> passage,
-  List questions,
-) {
-  final String content = passage['content'] ?? '';
+    BuildContext context,
+    Map<String, dynamic> passage,
+    List questions,
+  ) {
+    final String content = passage['content'] ?? '';
 
-  final sortedQuestions = questions
-      .where((q) => q['start'] != null && q['end'] != null)
-      .toList()
-    ..sort((a, b) => a['start'].compareTo(b['start']));
+    final sortedQuestions =
+        questions.where((q) => q['start'] != null && q['end'] != null).toList()
+          ..sort((a, b) => a['start'].compareTo(b['start']));
 
-  List<TextSpan> spans = [];
-  int index = 0;
+    List<TextSpan> spans = [];
+    int index = 0;
 
-  for (final q in sortedQuestions) {
-    final int start = q['start'];
-    final int end = q['end'];
+    for (final q in sortedQuestions) {
+      final int start = q['start'];
+      final int end = q['end'];
 
-    if (index < start) {
-      spans.add(TextSpan(text: content.substring(index, start)));
+      if (index < start) {
+        spans.add(TextSpan(text: content.substring(index, start)));
+      }
+
+      spans.add(
+        TextSpan(
+          text: content.substring(start, end),
+          style: TextStyle(
+            backgroundColor: q['correct'] ? correctGreen : wrongRed,
+          ),
+        ),
+      );
+
+      index = end;
     }
 
-    spans.add(
-      TextSpan(
-        text: content.substring(start, end),
-        style: TextStyle(
-          backgroundColor: q['correct'] ? correctGreen : wrongRed,
+    if (index < content.length) {
+      spans.add(TextSpan(text: content.substring(index)));
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 15, height: 1.6, color: textGrey),
+          children: spans,
         ),
       ),
     );
-
-    index = end;
   }
-
-  if (index < content.length) {
-    spans.add(TextSpan(text: content.substring(index)));
-  }
-
-  return Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: RichText(
-      text: TextSpan(
-        style: const TextStyle(fontSize: 15, height: 1.6, color: textGrey),
-        children: spans,
-      ),
-    ),
-  );
-}
 
   Widget _passageTitle(int index) {
     return Text(
@@ -210,8 +209,8 @@ class ReadingReviewPage extends StatelessWidget {
             userAnswer: q['userAnswer'],
             correctAnswer: q['correctAnswer'],
             explanation: q['explanation']?.toString().trim().isNotEmpty == true
-    ? q['explanation']
-    : "No explanation available.",
+                ? q['explanation']
+                : "No explanation available.",
 
             skill: _displaySkillName(q['type']),
 
@@ -288,5 +287,4 @@ class ReadingReviewPage extends StatelessWidget {
       ),
     );
   }
-
 }

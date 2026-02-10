@@ -268,58 +268,59 @@ class ReadingResultPage extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-  child: SizedBox(
-    height: 40,
-    child: OutlinedButton.icon(
-      onPressed: () {
-        Navigator.pop(context);
-      },
-      icon: const Icon(Icons.menu_book, size: 18),
-      label: const Text(
-        "Back to Reading",
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      ),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: primaryBlue,
-        side: const BorderSide(color: primaryBlue),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 40,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              icon: const Icon(Icons.menu_book, size: 18),
+              label: const Text(
+                "Back to Reading",
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primaryBlue,
+                side: const BorderSide(color: primaryBlue),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
-    ),
-  ),
-),
 
         const SizedBox(width: 12),
         Expanded(
-  child: SizedBox(
-    height: 40,
-    child: ElevatedButton.icon(
-      onPressed: () {
-        Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ReadingReviewPage(
-                    resultId: resultId,
+          child: SizedBox(
+            height: 40,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ReadingReviewPage(resultId: resultId),
                   ),
+                );
+              },
+              icon: const Icon(Icons.analytics, size: 18, color: Colors.white),
+              label: const Text(
+                "Review Answers",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
-              );
-      },
-      icon: const Icon(Icons.analytics, size: 18, color: Colors.white),
-      label: const Text(
-        "Review Answers",
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryBlue,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
-    ),
-  ),
-),
-
       ],
     );
   }
@@ -332,40 +333,33 @@ class ReadingResultPage extends StatelessWidget {
     );
 
     return _card(
-  Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: const [
-          Icon(Icons.lightbulb, color: Colors.orange),
-          SizedBox(width: 8),
-          Text(
-            "Teacher's Feedback",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.lightbulb, color: Colors.orange),
+              SizedBox(width: 8),
+              Text(
+                "Teacher's Feedback",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          ...tips.map(
+            (t) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                "• $t",
+                style: const TextStyle(fontSize: 14, height: 1.5),
+              ),
             ),
           ),
         ],
       ),
-      const SizedBox(height: 12),
-
-      ...tips.map(
-        (t) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            "• $t",
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
-            ),
-          ),
-        ),
-      ),
-    ],
-  ),
-);
-
+    );
   }
 
   List<String> _generateTips({
