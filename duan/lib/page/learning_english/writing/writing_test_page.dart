@@ -137,8 +137,21 @@ Return ONLY valid JSON with this structure:
   "overallComment": "string",
   "strengths": ["string"],
   "improvements": ["string"],
-  "bandUpgradeTips": ["string"]
+  "bandUpgradeTips": ["string"],
+
+  "vocabularyFeedback": {
+    "weakWords": ["string"],
+    "betterAlternatives": ["string"],
+    "collocationSuggestions": ["string"]
+  },
+
+  "grammarFeedback": {
+    "commonErrors": ["string"],
+    "sentenceStructureIssues": ["string"],
+    "improvementSuggestions": ["string"]
+  }
 }
+
 
 Do NOT include markdown.
 Do NOT include explanation outside JSON.

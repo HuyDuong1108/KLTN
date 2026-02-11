@@ -107,6 +107,9 @@ class _WritingReviewPageState
           _vocabUpgrade(),
           const SizedBox(height: 24),
 
+          _grammarUpgrade(),
+const SizedBox(height: 24),
+
           _bandUpgradeTips(),
           const SizedBox(height: 32),
 
@@ -216,7 +219,14 @@ final improvements = (aiResult?['improvements'] as List?) ?? [];
 
   // ================= VOCAB =================
  Widget _vocabUpgrade() {
-  final tips = aiResult?['bandUpgradeTips'] as List?;
+  final vocab = aiResult?['vocabularyFeedback'];
+
+  final weakWords =
+      (vocab?['weakWords'] as List?) ?? [];
+  final betterWords =
+      (vocab?['betterAlternatives'] as List?) ?? [];
+  final collocations =
+      (vocab?['collocationSuggestions'] as List?) ?? [];
 
   return _card(
     Column(
@@ -231,15 +241,108 @@ final improvements = (aiResult?['improvements'] as List?) ?? [];
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          tips != null
-              ? tips.map((e) => "• $e").join("\n")
-              : "No vocabulary suggestions available.",
-        ),
+
+        if (weakWords.isNotEmpty) ...[
+          const Text(
+            "Words to Improve:",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(weakWords.map((e) => "• $e").join("\n")),
+          const SizedBox(height: 12),
+        ],
+
+        if (betterWords.isNotEmpty) ...[
+          const Text(
+            "Better Alternatives:",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(betterWords.map((e) => "• $e").join("\n")),
+          const SizedBox(height: 12),
+        ],
+
+        if (collocations.isNotEmpty) ...[
+          const Text(
+            "Collocation Suggestions:",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(collocations.map((e) => "• $e").join("\n")),
+        ],
+
+        if (weakWords.isEmpty &&
+            betterWords.isEmpty &&
+            collocations.isEmpty)
+          const Text(
+            "No vocabulary analysis available.",
+          ),
       ],
     ),
   );
 }
+Widget _grammarUpgrade() {
+  final grammar = aiResult?['grammarFeedback'];
+
+  final errors =
+      (grammar?['commonErrors'] as List?) ?? [];
+  final structureIssues =
+      (grammar?['sentenceStructureIssues'] as List?) ?? [];
+  final suggestions =
+      (grammar?['improvementSuggestions'] as List?) ?? [];
+
+  return _card(
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Grammar Range & Accuracy",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: primaryBlue,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        if (errors.isNotEmpty) ...[
+          const Text(
+            "Common Errors:",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(errors.map((e) => "• $e").join("\n")),
+          const SizedBox(height: 12),
+        ],
+
+        if (structureIssues.isNotEmpty) ...[
+          const Text(
+            "Sentence Structure Issues:",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(structureIssues.map((e) => "• $e").join("\n")),
+          const SizedBox(height: 12),
+        ],
+
+        if (suggestions.isNotEmpty) ...[
+          const Text(
+            "How to Improve Grammar:",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(suggestions.map((e) => "• $e").join("\n")),
+        ],
+
+        if (errors.isEmpty &&
+            structureIssues.isEmpty &&
+            suggestions.isEmpty)
+          const Text("No grammar analysis available."),
+      ],
+    ),
+  );
+}
+
 
 
   // ================= BAND TIPS =================
