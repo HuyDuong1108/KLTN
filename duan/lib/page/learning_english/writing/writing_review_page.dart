@@ -1,7 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'writing_test_page.dart';
 
-class WritingReviewPage extends StatelessWidget {
-  const WritingReviewPage({super.key});
+class WritingReviewPage extends StatefulWidget {
+  final String resultId;
+
+  const WritingReviewPage({
+    super.key,
+    required this.resultId,
+  });
+
+  @override
+  State<WritingReviewPage> createState() =>
+      _WritingReviewPageState();
+}
+class _WritingReviewPageState
+    extends State<WritingReviewPage> {
+
+  bool _loading = true;
+  Map<String, dynamic>? resultData;
+  Map<String, dynamic>? aiResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReview();
+  }
+
+  Future<void> _loadReview() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('writing_results')
+        .doc(widget.resultId)
+        .get();
+
+    final data = doc.data();
+
+   setState(() {
+  resultData = data;
+
+  final rawAI = data?['aiResult'];
+
+  if (rawAI == null ||
+    rawAI is! Map ||
+    rawAI['overallBand'] == null ||
+    rawAI['strengths'] == null ||
+    rawAI['improvements'] == null ||
+    rawAI['bandUpgradeTips'] == null) {
+    aiResult = _safeAIResult();
+  } else {
+    aiResult = Map<String, dynamic>.from(rawAI);
+  }
+
+  _loading = false;
+});
+
+  }
+
 
   // ===== COLORS =====
   static const Color primaryBlue = Color(0xFF1976D2);
@@ -28,7 +82,9 @@ class WritingReviewPage extends StatelessWidget {
       ),
 
       // ================= BODY =================
-      body: ListView(
+      body: _loading
+    ? const Center(child: CircularProgressIndicator())
+    : ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _overviewComment(),
@@ -36,18 +92,14 @@ class WritingReviewPage extends StatelessWidget {
 
           _taskReview(
             title: "Task 1 Review",
-            content:
-                "The chart shows an increase in internet usage over the years. "
-                "However, some data is not fully described, and comparisons could be clearer.",
+            taskKey: "task1",
           ),
 
           const SizedBox(height: 24),
 
           _taskReview(
             title: "Task 2 Review",
-            content:
-                "Some people believe schools should teach financial skills. "
-                "I agree with this idea because money management is essential in modern life.",
+            taskKey: "task2",
           ),
 
           const SizedBox(height: 24),
@@ -74,59 +126,70 @@ class WritingReviewPage extends StatelessWidget {
           colors: [Color(0xFF42A5F5), Color(0xFF90CAF9)],
         ),
       ),
-      child: const Text(
+      child: Text( aiResult?['overallComment'] ??
         "Your writing is clear and easy to follow. To reach Band 7+, "
         "you should develop ideas more deeply and use a wider range of academic vocabulary.",
-        style: TextStyle(color: Colors.white, height: 1.5, fontSize: 15),
+        style: const TextStyle(color: Colors.white, height: 1.5, fontSize: 15),
       ),
     );
   }
 
   // ================= TASK REVIEW =================
-  Widget _taskReview({required String title, required String content}) {
-    return _card(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: primaryBlue,
-            ),
-          ),
-          const SizedBox(height: 12),
+  Widget _taskReview({
+  required String title,
+  required String taskKey,
+}) {
+  final strengths = (aiResult?['strengths'] as List?) ?? [];
+final improvements = (aiResult?['improvements'] as List?) ?? [];
 
-          _highlightBlock(
-            label: "✔ Good",
-            color: goodGreen,
-            text: "The introduction clearly paraphrases the question.",
-          ),
 
-          _highlightBlock(
-            label: "⚠ Needs Improvement",
-            color: warnYellow,
-            text: "Some comparisons are mentioned but not fully explained.",
-          ),
+  final answer =
+      resultData?['tasks']?[taskKey]?['answer'] ?? "";
 
-          _highlightBlock(
-            label: "✖ Error",
-            color: errorRed,
-            text: "There is limited use of complex sentence structures.",
+  return _card(
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: primaryBlue,
           ),
+        ),
+        const SizedBox(height: 12),
 
-          const SizedBox(height: 12),
-          const Text(
-            "Suggested Rewrite:",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text(content, style: const TextStyle(height: 1.5)),
-        ],
-      ),
-    );
-  }
+        _highlightBlock(
+          label: "✔ Good",
+          color: goodGreen,
+          text: strengths != null && strengths.isNotEmpty
+              ? strengths.first
+              : "No strengths available.",
+        ),
+
+        _highlightBlock(
+          label: "⚠ Needs Improvement",
+          color: warnYellow,
+          text: improvements != null && improvements.isNotEmpty
+              ? improvements.first
+              : "No improvements available.",
+        ),
+
+        const SizedBox(height: 12),
+        const Text(
+          "Suggested Rewrite:",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          answer,
+          style: const TextStyle(height: 1.5),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _highlightBlock({
     required String label,
@@ -152,56 +215,99 @@ class WritingReviewPage extends StatelessWidget {
   }
 
   // ================= VOCAB =================
-  Widget _vocabUpgrade() {
-    return _card(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            "Vocabulary & Structures to Upgrade Your Band",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: primaryBlue,
-            ),
+ Widget _vocabUpgrade() {
+  final tips = aiResult?['bandUpgradeTips'] as List?;
+
+  return _card(
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Vocabulary & Structures to Upgrade Your Band",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: primaryBlue,
           ),
-          SizedBox(height: 12),
-          Text("• Instead of \"important\" → \"essential / crucial\""),
-          Text(
-            "• Instead of \"many people\" → \"a significant proportion of people\"",
-          ),
-          Text("• Use structures like: \"Not only ..., but also ...\""),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(height: 12),
+        Text(
+          tips != null
+              ? tips.map((e) => "• $e").join("\n")
+              : "No vocabulary suggestions available.",
+        ),
+      ],
+    ),
+  );
+}
+
 
   // ================= BAND TIPS =================
   Widget _bandUpgradeTips() {
-    return _card(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            "How to Reach the Next Band",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: primaryBlue,
-            ),
+  final tips = aiResult?['bandUpgradeTips'] as List?;
+
+  return _card(
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "How to Reach the Next Band",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: primaryBlue,
           ),
-          SizedBox(height: 10),
-          Text(
-            "• Develop each main idea with explanation + example.\n"
-            "• Use more academic collocations.\n"
-            "• Reduce grammar mistakes in complex sentences.\n"
-            "• Avoid repeating the same words.",
-            style: TextStyle(height: 1.6),
-          ),
-        ],
-      ),
-    );
+        ),
+        const SizedBox(height: 10),
+        Text(
+          tips != null
+              ? tips.map((e) => "• $e").join("\n")
+              : "No improvement tips available.",
+          style: const TextStyle(height: 1.6),
+        ),
+      ],
+    ),
+  );
+}
+
+Map<String, dynamic> _safeAIResult() {
+  final task1WordCount =
+      resultData?['tasks']?['task1']?['wordCount'] ?? 0;
+  final task2WordCount =
+      resultData?['tasks']?['task2']?['wordCount'] ?? 0;
+
+  double estimatedBand = 5.5;
+
+  if (task2WordCount >= 250 && task1WordCount >= 150) {
+    estimatedBand = 6.5;
   }
+
+  if (task2WordCount >= 280 && task1WordCount >= 170) {
+    estimatedBand = 7.0;
+  }
+
+  return {
+    "overallBand": estimatedBand,
+    "overallComment":
+        "Your writing meets basic task requirements. To achieve a higher band, focus on deeper idea development and grammatical accuracy.",
+    "strengths": [
+      "Your response addresses the main task.",
+      "Ideas are generally understandable."
+    ],
+    "improvements": [
+      "Develop explanations with clearer examples.",
+      "Improve grammar accuracy in complex sentences.",
+      "Expand academic vocabulary range."
+    ],
+    "bandUpgradeTips": [
+      "Use more varied sentence structures.",
+      "Avoid repeating basic vocabulary.",
+      "Add more detailed comparisons in Task 1.",
+      "Support arguments with examples in Task 2."
+    ]
+  };
+}
+
 
   // ================= ACTION =================
   Widget _actionButtons(BuildContext context) {
@@ -213,11 +319,23 @@ class WritingReviewPage extends StatelessWidget {
           height: 52,
           child: ElevatedButton.icon(
             onPressed: () {
-              // TODO: Navigate to WritingTestPage
-            },
+  final testId = resultData?['testId'];
+
+  if (testId != null) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WritingTestPage(
+          testId: testId,
+        ),
+      ),
+    );
+  }
+},
+
             icon: const Icon(Icons.refresh, color: Colors.white),
             label: const Text(
-              "Rewrite & Retake Test",
+              "Back to Test",
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,

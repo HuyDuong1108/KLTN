@@ -60,7 +60,7 @@ class _WritingTestPageState extends State<WritingTestPage> {
     setState(() {
       _tasks = List<Map<String, dynamic>>.from(data['tasks']);
       for (final task in _tasks) {
-        final String key = task['type']; // task1 / task2
+        final String key = task['type']; 
         _answerControllers[key] = TextEditingController();
         _wordCounts[key] = 0;
       }

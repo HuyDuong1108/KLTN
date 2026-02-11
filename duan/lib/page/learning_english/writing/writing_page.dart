@@ -180,10 +180,10 @@ class _WritingPageState extends State<WritingPage> {
               icon: Icons.analytics_outlined,
               color: primaryBlue,
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WritingReviewPage()),
-                );
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(builder: (_) => const WritingReviewPage()),
+                // );
               },
             ),
           ] else ...[
