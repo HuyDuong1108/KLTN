@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class WritingResultPage extends StatelessWidget {
-  const WritingResultPage({super.key});
+class WritingResultPage extends StatefulWidget {
+  final String resultId;
+
+  const WritingResultPage({super.key, required this.resultId});
+
+  @override
+  State<WritingResultPage> createState() => _WritingResultPageState();
+}
+
+class _WritingResultPageState extends State<WritingResultPage> {
+  bool _loading = true;
+  Map<String, dynamic>? resultData;
+  Map<String, dynamic>? aiResult;
 
   // ================= COLORS =================
   static const Color primaryBlue = Color(0xFF1976D2);
@@ -13,8 +25,19 @@ class WritingResultPage extends StatelessWidget {
   static const Color warningOrange = Color(0xFFFFA726);
   static const Color textGrey = Color(0xFF455A64);
 
+  String _getBandLabel(double band) {
+    if (band >= 8) return "Very Good User";
+    if (band >= 7) return "Good User";
+    if (band >= 6) return "Competent User";
+    if (band >= 5) return "Modest User";
+    return "Limited User";
+  }
+
   @override
   Widget build(BuildContext context) {
+    final double overallBand = (aiResult?['overallBand'] ?? 0).toDouble();
+
+    final String bandLabel = _getBandLabel(overallBand);
     return Scaffold(
       backgroundColor: bgColor,
 
@@ -30,39 +53,77 @@ class WritingResultPage extends StatelessWidget {
       ),
 
       // ================= BODY =================
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _overallBandCard(),
-          const SizedBox(height: 16),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _overallBandCard(),
+                const SizedBox(height: 16),
 
-          _bandComment(),
-          const SizedBox(height: 20),
-          
+                _bandComment(),
+                const SizedBox(height: 20),
 
-          _taskScoreCard(),
-          const SizedBox(height: 20),
+                _taskScoreCard(),
+                const SizedBox(height: 20),
 
-          _criteriaBreakdown(),
-          const SizedBox(height: 20),
+                _criteriaBreakdown(),
+                const SizedBox(height: 20),
 
-          _feedbackSection(),
-          const SizedBox(height: 20),
+                _feedbackSection(),
+                const SizedBox(height: 20),
 
-          _improvementSection(),
-          const SizedBox(height: 24),
+                _improvementSection(),
+                const SizedBox(height: 24),
 
-          _essayReviewSection(),
-          const SizedBox(height: 32),
+                _essayReviewSection(),
+                const SizedBox(height: 32),
 
-          _backButton(context),
-        ],
-      ),
+                _backButton(context),
+              ],
+            ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadResult();
+  }
+
+  Future<void> _loadResult() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('writing_results')
+        .doc(widget.resultId)
+        .get();
+
+    final data = doc.data();
+
+    setState(() {
+      resultData = data ?? {};
+      aiResult = data?['aiResult'] ?? _safeDefault();
+      _loading = false;
+    });
+  }
+
+  Map<String, dynamic> _safeDefault() {
+    return {
+      "overallBand": 5.5,
+      "task1Band": 5.5,
+      "task2Band": 5.5,
+      "criteria": {},
+      "strengths": [],
+      "improvements": [],
+      "bandUpgradeTips": [],
+    };
   }
 
   // ================= OVERALL BAND =================
   Widget _overallBandCard() {
+    final double overallBand = (aiResult?['overallBand'] ?? 0).toDouble();
+
+    final String bandLabel = _getBandLabel(overallBand);
+
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -75,25 +136,22 @@ class WritingResultPage extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
+        children: [
+          const Text(
             "Overall Writing Band",
             style: TextStyle(color: Colors.white70),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
-            "6.5",
-            style: TextStyle(
+            overallBand.toStringAsFixed(1),
+            style: const TextStyle(
               fontSize: 44,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          SizedBox(height: 6),
-          Text(
-            "Competent User",
-            style: TextStyle(color: Colors.white),
-          ),
+          const SizedBox(height: 6),
+          Text(bandLabel, style: const TextStyle(color: Colors.white)),
         ],
       ),
     );
@@ -101,19 +159,20 @@ class WritingResultPage extends StatelessWidget {
 
   // ================= BAND COMMENT =================
   Widget _bandComment() {
+    final double overallBand = (aiResult?['overallBand'] ?? 0).toDouble();
+
     return _card(
       color: lightBlue,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Icon(Icons.chat_bubble_outline, color: primaryBlue),
-          SizedBox(width: 12),
+        children: [
+          const Icon(Icons.chat_bubble_outline, color: primaryBlue),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              "Your writing shows clear organisation and relevant ideas. "
-              "To reach Band 7+, focus on developing ideas more deeply and "
-              "using a wider range of academic vocabulary.",
-              style: TextStyle(height: 1.5),
+              aiResult?['overallComment'] ??
+                  _ruleBasedOverallComment(overallBand),
+              style: const TextStyle(height: 1.5),
             ),
           ),
         ],
@@ -121,13 +180,30 @@ class WritingResultPage extends StatelessWidget {
     );
   }
 
+  String _ruleBasedOverallComment(double band) {
+    if (band >= 7) {
+      return "Your writing is well-developed and coherent. "
+          "To reach Band 8, refine lexical precision and sentence variety.";
+    } else if (band >= 6) {
+      return "Your writing is clear and organised. "
+          "Develop ideas more deeply and expand academic vocabulary.";
+    } else {
+      return "Focus on task response and grammar accuracy. "
+          "Improve paragraph structure and idea development.";
+    }
+  }
+
   // ================= TASK SCORE =================
   Widget _taskScoreCard() {
+    final double task1 = (aiResult?['task1Band'] ?? 0).toDouble();
+
+    final double task2 = (aiResult?['task2Band'] ?? 0).toDouble();
+
     return Row(
       children: [
-        _taskMiniCard("Task 1", "6.0", lightBlue),
+        _taskMiniCard("Task 1", task1.toStringAsFixed(1), lightBlue),
         const SizedBox(width: 16),
-        _taskMiniCard("Task 2", "6.5", mintBlue),
+        _taskMiniCard("Task 2", task2.toStringAsFixed(1), mintBlue),
       ],
     );
   }
@@ -166,14 +242,28 @@ class WritingResultPage extends StatelessWidget {
 
   // ================= CRITERIA =================
   Widget _criteriaBreakdown() {
+    final criteria = aiResult?['criteria'] ?? {};
+
     return _sectionCard(
       title: "Band Criteria Breakdown",
       child: Column(
-        children: const [
-          _criteriaRow("Task Achievement", 6.0),
-          _criteriaRow("Coherence & Cohesion", 6.5),
-          _criteriaRow("Lexical Resource", 6.0),
-          _criteriaRow("Grammar Range & Accuracy", 6.5),
+        children: [
+          _criteriaRow(
+            "Task Achievement",
+            (criteria['taskAchievement'] ?? 0).toDouble(),
+          ),
+          _criteriaRow(
+            "Coherence & Cohesion",
+            (criteria['coherence'] ?? 0).toDouble(),
+          ),
+          _criteriaRow(
+            "Lexical Resource",
+            (criteria['lexical'] ?? 0).toDouble(),
+          ),
+          _criteriaRow(
+            "Grammar Range & Accuracy",
+            (criteria['grammar'] ?? 0).toDouble(),
+          ),
         ],
       ),
     );
@@ -181,39 +271,36 @@ class WritingResultPage extends StatelessWidget {
 
   // ================= FEEDBACK =================
   Widget _feedbackSection() {
+    final strengths = aiResult?['strengths'] as List?;
+    final improvements = aiResult?['improvements'] as List?;
+
     return _sectionCard(
       title: "Detailed Feedback",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
+        children: [
+          const Text(
             "✔ Strengths",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: successGreen,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: successGreen),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
-            "• Ideas are relevant and clearly expressed.\n"
-            "• Paragraphing is logical and easy to follow.\n"
-            "• Grammar is mostly accurate.",
-            style: TextStyle(height: 1.5),
+            strengths != null
+                ? strengths.map((e) => "• $e").join("\n")
+                : "• Clear structure\n• Relevant ideas",
+            style: const TextStyle(height: 1.5),
           ),
-          SizedBox(height: 14),
-          Text(
+          const SizedBox(height: 14),
+          const Text(
             "⚠ Areas to Improve",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: warningOrange,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: warningOrange),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
-            "• Some ideas lack deeper explanation.\n"
-            "• Limited range of academic vocabulary.\n"
-            "• Minor grammatical slips remain.",
-            style: TextStyle(height: 1.5),
+            improvements != null
+                ? improvements.map((e) => "• $e").join("\n")
+                : "• Expand explanations\n• Improve vocabulary range",
+            style: const TextStyle(height: 1.5),
           ),
         ],
       ),
@@ -222,52 +309,45 @@ class WritingResultPage extends StatelessWidget {
 
   // ================= IMPROVEMENT =================
   Widget _improvementSection() {
+    final tips = aiResult?['bandUpgradeTips'] as List?;
+
     return _sectionCard(
       title: "How to Improve Your Writing Band",
-      child: const Text(
-        "• Analyse Task 1 data carefully before writing.\n"
-        "• Use more varied linking devices.\n"
-        "• Practise complex sentence structures.\n"
-        "• Learn topic-based academic vocabulary.",
-        style: TextStyle(height: 1.6),
+      child: Text(
+        tips != null
+            ? tips.map((e) => "• $e").join("\n")
+            : "• Develop ideas more clearly\n"
+                  "• Improve grammar accuracy\n"
+                  "• Expand academic vocabulary",
+        style: const TextStyle(height: 1.6),
       ),
     );
   }
 
   // ================= ESSAY REVIEW =================
   Widget _essayReviewSection() {
+    final task1 = (resultData?['tasks']?['task1']?['answer'] ?? "").toString();
+
+    final task2 = (resultData?['tasks']?['task2']?['answer'] ?? "").toString();
+
     return _sectionCard(
       title: "Your Writing",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
+        children: [
+          const Text(
             "Task 1 Essay",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: primaryBlue,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: primaryBlue),
           ),
-          SizedBox(height: 6),
-          Text(
-            "The chart illustrates the proportion of households with various "
-            "types of internet access over a given period...",
-            style: TextStyle(height: 1.5),
-          ),
-          SizedBox(height: 16),
-          Text(
+          const SizedBox(height: 6),
+          Text(task1, style: const TextStyle(height: 1.5)),
+          const SizedBox(height: 16),
+          const Text(
             "Task 2 Essay",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: primaryBlue,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: primaryBlue),
           ),
-          SizedBox(height: 6),
-          Text(
-            "Some people argue that schools should focus more on teaching "
-            "financial skills. I strongly agree with this view...",
-            style: TextStyle(height: 1.5),
-          ),
+          const SizedBox(height: 6),
+          Text(task2, style: const TextStyle(height: 1.5)),
         ],
       ),
     );
@@ -357,7 +437,7 @@ class _criteriaRow extends StatelessWidget {
         children: [
           Expanded(child: Text(title)),
           Text(
-            band.toString(),
+            band.toStringAsFixed(1),
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               color: Color(0xFF1976D2),
