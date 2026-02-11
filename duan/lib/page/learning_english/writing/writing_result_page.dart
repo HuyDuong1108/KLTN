@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'writing_review_page.dart';
+
 class WritingResultPage extends StatefulWidget {
   final String resultId;
 
@@ -311,15 +312,95 @@ class _WritingResultPageState extends State<WritingResultPage> {
   Widget _improvementSection() {
     final tips = aiResult?['bandUpgradeTips'] as List?;
 
+    final List<String> tipList = tips != null && tips.isNotEmpty
+        ? List<String>.from(tips)
+        : [
+            "**Vocabulary:** Actively learn synonyms and collocations.",
+            "**Grammar:** Improve complex sentence structures.",
+            "**Task 1:** Improve data comparison clarity.",
+            "**Task 2:** Develop arguments with clearer examples.",
+            "**Coherence:** Use advanced linking devices.",
+          ];
+
     return _sectionCard(
       title: "How to Improve Your Writing Band",
-      child: Text(
-        tips != null
-            ? tips.map((e) => "• $e").join("\n")
-            : "• Develop ideas more clearly\n"
-                  "• Improve grammar accuracy\n"
-                  "• Expand academic vocabulary",
-        style: const TextStyle(height: 1.6),
+      child: Column(
+        children: tipList.map((tip) => _improvementItem(tip)).toList(),
+      ),
+    );
+  }
+
+  Widget _improvementItem(String text) {
+    String title = "";
+    String content = text;
+
+    if (text.contains(":")) {
+      title = text.split(":").first.replaceAll("**", "");
+      content = text.split(":").sublist(1).join(":").trim();
+    }
+
+    Color color = Colors.blue;
+    IconData icon = Icons.arrow_right;
+
+    switch (title.toLowerCase()) {
+      case "vocabulary":
+        color = Colors.green;
+        icon = Icons.auto_awesome;
+        break;
+      case "grammar":
+        color = Colors.purple;
+        icon = Icons.rule;
+        break;
+      case "task 1":
+        color = Colors.orange;
+        icon = Icons.bar_chart;
+        break;
+      case "task 2":
+        color = Colors.redAccent;
+        icon = Icons.edit;
+        break;
+      case "coherence":
+      case "coherence and cohesion":
+        color = Colors.teal;
+        icon = Icons.link;
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  color: Colors.black87,
+                  height: 1.5,
+                  fontSize: 14,
+                ),
+                children: [
+                  if (title.isNotEmpty)
+                    TextSpan(
+                      text: "$title\n",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  TextSpan(text: content),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -355,69 +436,65 @@ class _WritingResultPageState extends State<WritingResultPage> {
 
   // ================= BUTTON =================
   Widget _backButton(BuildContext context) {
-  return Column(
-    children: [
-
-      // ===== BACK REVIEW DETAIL =====
-      SizedBox(
-        width: double.infinity,
-        height: 52,
-        child: ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => WritingReviewPage(
-                  resultId: widget.resultId,
+    return Column(
+      children: [
+        // ===== BACK REVIEW DETAIL =====
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WritingReviewPage(resultId: widget.resultId),
                 ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
             ),
-          ),
-          child: const Text(
-            "Review Detail",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+            child: const Text(
+              "Review Detail",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
-      ),
 
-      const SizedBox(height: 12),
+        const SizedBox(height: 12),
 
-      // ===== BACK TO WRITING =====
-      SizedBox(
-        width: double.infinity,
-        height: 52,
-        child: ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryBlue,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+        // ===== BACK TO WRITING =====
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryBlue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
-          ),
-          child: const Text(
-            "Back to Writing",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+            child: const Text(
+              "Back to Writing",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
-      ),
-    ],
-  );
-}
-
+      ],
+    );
+  }
 
   // ================= SHARED =================
   Widget _card({required Color color, required Widget child}) {

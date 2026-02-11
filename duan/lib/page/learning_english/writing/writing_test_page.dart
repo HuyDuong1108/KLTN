@@ -23,6 +23,7 @@ class _WritingTestPageState extends State<WritingTestPage> {
   bool _timerStarted = false;
   final Map<String, TextEditingController> _answerControllers = {};
   final Map<String, int> _wordCounts = {};
+  bool _isSubmitting = false;
 
   int _durationMinutes = 60; // fallback
 
@@ -60,7 +61,7 @@ class _WritingTestPageState extends State<WritingTestPage> {
     setState(() {
       _tasks = List<Map<String, dynamic>>.from(data['tasks']);
       for (final task in _tasks) {
-        final String key = task['type']; 
+        final String key = task['type'];
         _answerControllers[key] = TextEditingController();
         _wordCounts[key] = 0;
       }
@@ -115,6 +116,12 @@ class _WritingTestPageState extends State<WritingTestPage> {
 You are an IELTS Writing examiner.
 
 Evaluate the following essays strictly according to official IELTS band descriptors.
+For suggestedRewrite.highlightPhrases.type use only:
+- vocabulary
+- collocation
+- grammar
+- band_booster
+
 
 Task 1:
 $task1
@@ -138,6 +145,14 @@ Return ONLY valid JSON with this structure:
   "strengths": ["string"],
   "improvements": ["string"],
   "bandUpgradeTips": ["string"],
+  "taskFeedback": {
+    "task1": {
+      "errors": ["string"]
+    },
+    "task2": {
+      "errors": ["string"]
+    }
+  },
 
   "vocabularyFeedback": {
     "weakWords": ["string"],
@@ -150,6 +165,27 @@ Return ONLY valid JSON with this structure:
     "sentenceStructureIssues": ["string"],
     "improvementSuggestions": ["string"]
   }
+  "suggestedRewrite": {
+  "task1": {
+    "text": "string",
+    "highlightPhrases": [
+      {
+        "phrase": "string",
+        "type": "vocabulary" 
+      }
+    ]
+  },
+  "task2": {
+    "text": "string",
+    "highlightPhrases": [
+      {
+        "phrase": "string",
+        "type": "grammar"
+      }
+    ]
+  }
+}
+
 }
 
 
@@ -205,6 +241,10 @@ Only return raw JSON.
   Future<void> _submitWriting() async {
     if (!mounted) return;
 
+    setState(() {
+      _isSubmitting = true;
+    });
+
     final resultRef = FirebaseFirestore.instance
         .collection('writing_results')
         .doc();
@@ -212,7 +252,6 @@ Only return raw JSON.
     final task1 = _answerControllers['task1']!.text;
     final task2 = _answerControllers['task2']!.text;
 
-    // 1️⃣ Lưu trước
     await resultRef.set({
       "testId": widget.testId,
       "submittedAt": FieldValue.serverTimestamp(),
@@ -227,6 +266,10 @@ Only return raw JSON.
     final aiData = await _callGeminiAI(task1: task1, task2: task2);
 
     await resultRef.update({"aiResult": aiData});
+
+    setState(() {
+      _isSubmitting = false;
+    });
 
     Navigator.pushReplacement(
       context,
@@ -270,45 +313,67 @@ Only return raw JSON.
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                ..._tasks.map((task) {
-                  return _taskCard(
-                    title: task['type'] == 'task1' ? 'Task 1' : 'Task 2',
-                    question: task['question'],
-                    minWords: task['minWords'],
-                    imageAsset: task['imageAsset'],
-                  );
-                }).toList(),
+      body: Stack(
+        children: [
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    ..._tasks.map((task) {
+                      return _taskCard(
+                        title: task['type'] == 'task1' ? 'Task 1' : 'Task 2',
+                        question: task['question'],
+                        minWords: task['minWords'],
+                        imageAsset: task['imageAsset'],
+                      );
+                    }).toList(),
 
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _submitWriting,
-
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryBlue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _submitWriting,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          "Submit Writing",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      "Submit Writing",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
-              ],
+
+          if (_isSubmitting)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 20),
+                    Text(
+                      "Analyzing your writing...\nThis may take a few seconds.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
             ),
+        ],
+      ),
     );
   }
 
@@ -403,6 +468,20 @@ Only return raw JSON.
         "Improve grammar accuracy.",
         "Expand academic vocabulary.",
       ],
+      "taskFeedback": {
+        "task1": {
+          "errors": [
+            "Limited use of complex sentence structures.",
+            "Some comparisons are not fully explained.",
+          ],
+        },
+        "task2": {
+          "errors": [
+            "Arguments lack deeper development.",
+            "Grammar inaccuracies reduce clarity.",
+          ],
+        },
+      },
     };
   }
 }
