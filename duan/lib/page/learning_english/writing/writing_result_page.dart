@@ -438,57 +438,92 @@ class _WritingResultPageState extends State<WritingResultPage> {
   Widget _backButton(BuildContext context) {
     return Column(
       children: [
-        // ===== BACK REVIEW DETAIL =====
+        // ===== REVIEW DETAIL (Primary) =====
         SizedBox(
           width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => WritingReviewPage(resultId: widget.resultId),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+          height: 54,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF4F8DFD), Color(0xFF1976D2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            child: const Text(
-              "Review Detail",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        WritingReviewPage(resultId: widget.resultId),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.auto_awesome, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    "Review Detail",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.3,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
-        // ===== BACK TO WRITING =====
+        // ===== BACK TO WRITING (Secondary Elegant) =====
         SizedBox(
           width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
+          height: 54,
+          child: OutlinedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFF1976D2), width: 1.5),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
               ),
+              backgroundColor: const Color(0xFFF5FAFF),
             ),
-            child: const Text(
-              "Back to Writing",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.arrow_back, color: Color(0xFF1976D2)),
+                SizedBox(width: 8),
+                Text(
+                  "Back to Writing",
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1976D2),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
