@@ -40,7 +40,7 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
   @override
   void initState() {
     super.initState();
-    tts.setLanguage("ja-JP");
+    tts.setLanguage("en-US");
     tts.setSpeechRate(0.4);
     tts.setPitch(1.1);
   }
@@ -250,13 +250,12 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
 
     final messenger = ScaffoldMessenger.of(context);
 
-    // ✅ Ẩn cái đang hiện để không kéo dài / chồng
     messenger.hideCurrentSnackBar();
 
     messenger.showSnackBar(
       SnackBar(
         content: Text(msg),
-        duration: const Duration(milliseconds: 900), // ✅ chỉnh nhanh/chậm ở đây
+        duration: const Duration(milliseconds: 900), 
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       ),
