@@ -4,6 +4,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+
 
 class SpeakingPage extends StatefulWidget {
   const SpeakingPage({super.key});
@@ -44,12 +46,13 @@ class _SpeakingPageState extends State<SpeakingPage> {
   ];
 
   // ===== NEW COLOR SYSTEM =====
-final Color primaryBlue   = Color(0xFF42A5F5); // xanh tươi chính (giống Overall band card)
-final Color accentBlue    = Color(0xFF29B6F6); // xanh sáng nổi bật hơn
-final Color lightBlue     = Color(0xFFE3F2FD); // nền card nhẹ
-final Color darkBlue      = Color(0xFF1565C0); // xanh đậm text
-final Color backgroundColor = Color(0xFFF5FAFF); // nền page
-
+  final Color primaryBlue = Color(
+    0xFF42A5F5,
+  ); // xanh tươi chính (giống Overall band card)
+  final Color accentBlue = Color(0xFF29B6F6); // xanh sáng nổi bật hơn
+  final Color lightBlue = Color(0xFFE3F2FD); // nền card nhẹ
+  final Color darkBlue = Color(0xFF1565C0); // xanh đậm text
+  final Color backgroundColor = Color(0xFFF5FAFF); // nền page
 
   // ===== LOGIC CHÍNH =====
 
@@ -197,8 +200,8 @@ Return JSON only:
       await _stt.listen(
         localeId: 'en_US',
 
-        listenFor: const Duration(seconds: 5),
-        pauseFor: const Duration(seconds: 2),
+        listenFor: const Duration(seconds: 100),
+        pauseFor: const Duration(seconds: 3),
         onResult: (result) {
           setState(() {
             userSpeech = result.recognizedWords;
@@ -268,7 +271,6 @@ Return JSON only:
 
       child: Column(
         children: [
-          
           const SizedBox(height: 15),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -521,12 +523,18 @@ Return JSON only:
                 Icon(Icons.lightbulb_outline, color: statusColor, size: 24),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    feedback,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: Colors.black87,
+                  child: MarkdownBody(
+                    data: feedback,
+                    styleSheet: MarkdownStyleSheet(
+                      p: const TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: Colors.black87,
+                      ),
+                      strong: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
                     ),
                   ),
                 ),
