@@ -8,7 +8,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
-
 class WritingTestPage extends StatefulWidget {
   final String testId;
 
@@ -52,34 +51,33 @@ class _WritingTestPageState extends State<WritingTestPage> {
       _loading = false;
     });
   }
-Future<void> _updateDailyGoal() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
 
-  final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  Future<void> _updateDailyGoal() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  final docRef = FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .collection('dailyGoals')
-      .doc(today);
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-  final snap = await docRef.get();
+    final docRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('dailyGoals')
+        .doc(today);
 
-  // Nếu chưa có document thì tạo mới
-  if (!snap.exists) {
-    await docRef.set({
-      "listeningReadingCount": 1,
-      "flashcardSetCount": 0,
-      "speakingCount": 0,
-      "date": today,
-    });
-  } else {
-    await docRef.update({
-      "listeningReadingCount": FieldValue.increment(1),
-    });
+    final snap = await docRef.get();
+
+    // Nếu chưa có document thì tạo mới
+    if (!snap.exists) {
+      await docRef.set({
+        "listeningReadingCount": 1,
+        "flashcardSetCount": 0,
+        "speakingCount": 0,
+        "date": today,
+      });
+    } else {
+      await docRef.update({"listeningReadingCount": FieldValue.increment(1)});
+    }
   }
-}
 
   Future<void> _loadTestAndStartTimer() async {
     final doc = await FirebaseFirestore.instance
@@ -295,10 +293,27 @@ Only return raw JSON.
     });
     await _updateDailyGoal();
 
-
     final aiData = await _callGeminiAI(task1: task1, task2: task2);
 
     await resultRef.update({"aiResult": aiData});
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('latestTest')
+          .doc('result')
+          .set({
+            "testType": "Writing",
+            "testId": widget.testId,
+            "band": aiData['overallBand'],
+            "task1Words": _wordCounts['task1'],
+            "task2Words": _wordCounts['task2'],
+            "durationMinutes": _durationMinutes,
+            "submittedAt": FieldValue.serverTimestamp(),
+            "reviewPath": resultRef.path,
+          });
+    }
 
     setState(() {
       _isSubmitting = false;

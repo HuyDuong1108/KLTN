@@ -222,6 +222,23 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
       "passages": passages,
     });
     await _updateDailyGoal();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('latestTest')
+          .doc('result')
+          .set({
+            "testType": "Reading",
+            "testId": widget.testId,
+            "band": result['band'],
+            "score": result['correct'], // dùng correct làm score
+            "durationMinutes": _durationMinutes,
+            "submittedAt": FieldValue.serverTimestamp(),
+            "reviewPath": docRef.path,
+          });
+    }
 
     if (!mounted) return;
 

@@ -3,7 +3,6 @@ import 'homeaction/chatgemni.dart';
 import 'profile/statistics/statistics_detail_page.dart';
 import 'package:intl/intl.dart';
 
-
 // dữ liệu từ API
 import '../data/stats_api.dart';
 import '../models/stats_summary.dart';
@@ -14,6 +13,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/continue_learning_card.dart';
 import 'learning/japan/lesson_detail_page.dart';
 import 'homeaction/speaking_example.dart';
+import 'learning_english/reading/reading_review_page.dart';
+import 'learning_english/writing/writing_review_page.dart';
+import 'learning_english/listening/listening_review_page.dart';
 
 // Trang Home chính
 class HomePageContent extends StatefulWidget {
@@ -138,8 +140,45 @@ class _HomePageContentState extends State<HomePageContent> {
 
               // --- Continue Learning card : mới thêm ---
               ContinueLearningCard(
-                onContinue: (lessonPath) =>
-                    _openContinueLesson(context, lessonPath),
+                onContinue: (reviewPath) async {
+                  final snap = await FirebaseFirestore.instance
+                      .doc(reviewPath)
+                      .get();
+
+                  if (!context.mounted) return;
+
+                  final data = snap.data() as Map<String, dynamic>;
+                  final testType = data['testType'];
+
+                  if (reviewPath.contains("reading_results")) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReadingReviewPage(
+                          resultId: reviewPath.split('/').last,
+                        ),
+                      ),
+                    );
+                  } else if (reviewPath.contains("writing_results")) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WritingReviewPage(
+                          resultId: reviewPath.split('/').last,
+                        ),
+                      ),
+                    );
+                  } else if (reviewPath.contains("listening_results")) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ListeningReviewPage(
+                          resultId: reviewPath.split('/').last,
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
 
               //  Stats card từ backend

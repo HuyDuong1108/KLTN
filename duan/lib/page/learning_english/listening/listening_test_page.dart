@@ -35,34 +35,31 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
   }
 
   Future<void> _updateDailyGoal() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-  final docRef = FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .collection('dailyGoals')
-      .doc(today);
+    final docRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('dailyGoals')
+        .doc(today);
 
-  final snap = await docRef.get();
+    final snap = await docRef.get();
 
-  // Nếu chưa có document thì tạo mới
-  if (!snap.exists) {
-    await docRef.set({
-      "listeningReadingCount": 1,
-      "flashcardSetCount": 0,
-      "speakingCount": 0,
-      "date": today,
-    });
-  } else {
-    await docRef.update({
-      "listeningReadingCount": FieldValue.increment(1),
-    });
+    // Nếu chưa có document thì tạo mới
+    if (!snap.exists) {
+      await docRef.set({
+        "listeningReadingCount": 1,
+        "flashcardSetCount": 0,
+        "speakingCount": 0,
+        "date": today,
+      });
+    } else {
+      await docRef.update({"listeningReadingCount": FieldValue.increment(1)});
+    }
   }
-}
-
 
   // ================= LOAD DATA + START TIMER =================
   Future<void> _loadTestAndStartTimer() async {
@@ -139,7 +136,24 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
       "sectionScore": result['sectionScore'],
     });
     await _updateDailyGoal();
-
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('latestTest')
+          .doc('result')
+          .set({
+            "testType": "Listening",
+            "testId": widget.testId,
+            "band": result['band'],
+            "correct": result['correct'],
+            "incorrect": result['incorrect'],
+            "durationUsed": (_testData!['duration'] * 60) - _remainingSeconds,
+            "submittedAt": FieldValue.serverTimestamp(),
+            "reviewPath": docRef.path, // cực quan trọng
+          });
+    }
 
     if (!mounted) return;
 
