@@ -29,6 +29,12 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
 
   String _currentFullReply = "";
 
+  final Color primaryBlue = const Color(0xFF42A5F5);
+  final Color accentBlue = const Color(0xFF29B6F6);
+  final Color lightBlue = const Color(0xFFE3F2FD);
+  final Color darkBlue = const Color(0xFF1565C0);
+  final Color backgroundColor = const Color(0xFFF5FAFF);
+
   List<List<Map<String, String>>> chatHistory = [];
   int currentChatIndex = 0;
 
@@ -188,28 +194,37 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+        gradient: LinearGradient(
+          colors: [Color(0xFF42A5F5), Color(0xFF64B5F6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
           ),
           const CircleAvatar(
             radius: 22,
             backgroundImage: AssetImage("lib/image/logo.png"),
+            backgroundColor: Colors.white,
           ),
           const SizedBox(width: 12),
           const Text(
             "AI Learning Assistant",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
           const Spacer(),
-          IconButton(icon: const Icon(Icons.menu), onPressed: _openChatMenu),
+          IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: _openChatMenu,
+          ),
         ],
       ),
     );
@@ -229,7 +244,7 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.add, color: Color(0xFFFF9A62)),
+                leading: const Icon(Icons.add, color: Color(0xFF42A5F5)),
                 title: const Text("New chat"),
                 onTap: () {
                   Navigator.pop(context);
@@ -257,7 +272,7 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
                     return ListTile(
                       leading: const Icon(
                         Icons.chat_bubble_outline,
-                        color: Color(0xFFFF9A62),
+                        color: Color(0xFF42A5F5),
                       ),
                       title: Text(
                         title,
@@ -359,9 +374,14 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF9A62), // cam nhạt đẹp
-                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF42A5F5), Color(0xFF29B6F6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
                   ),
+
                   child: Text(
                     msg["text"]!,
                     softWrap: true,
@@ -369,8 +389,7 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
                     style: const TextStyle(
                       fontSize: 15,
                       height: 1.4,
-                      letterSpacing: 0.1,
-                      color: Colors.black87,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -406,13 +425,14 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF1E8),
+                color: lightBlue,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFFF9A62)),
+                border: Border.all(color: primaryBlue.withOpacity(0.3)),
               ),
+
               child: Text(
                 text,
-                style: const TextStyle(fontSize: 13, color: Color(0xFFFF7A2F)),
+                style: TextStyle(fontSize: 13, color: darkBlue),
               ),
             ),
           );
@@ -427,10 +447,16 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFF1E8), // nền cam nhạt
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
-      ),
+      decoration: BoxDecoration(
+  color: Colors.white,
+  boxShadow: [
+    BoxShadow(
+      color: primaryBlue.withOpacity(0.15),
+      blurRadius: 10,
+    ),
+  ],
+),
+
       child: Row(
         children: [
           Expanded(
@@ -477,7 +503,7 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
                 // ✈️ SEND
                 : IconButton(
                     key: const ValueKey("send"),
-                    icon: const Icon(Icons.send, color: Color(0xFFFF9A62)),
+                    icon: const Icon(Icons.send, color: Color(0xFF42A5F5)),
                     onPressed: () {
                       final text = _controller.text.trim();
                       if (text.isNotEmpty) {
