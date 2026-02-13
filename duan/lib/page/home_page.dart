@@ -281,7 +281,7 @@ class _HomePageContentState extends State<HomePageContent> {
                   if (!snapshot.hasData || !snapshot.data!.exists) {
                     return Row(
                       children: const [
-                        _goalChip("Daily lesson", false, progress: "0/2"),
+                        _goalChip("Daily Lesson", false, progress: "0/2"),
                         _goalChip("Flashcards", false, progress: "0/2"),
                         _goalChip("Speaking", false, progress: "0/5"),
                       ],
@@ -302,7 +302,7 @@ class _HomePageContentState extends State<HomePageContent> {
                   return Row(
                     children: [
                       _goalChip(
-                        "Daily lesson",
+                        "Test Lesson",
                         lessonDone,
                         progress: lessonProgress,
                       ),
@@ -381,38 +381,114 @@ Widget _quickPracticeButton(IconData icon, Color color, VoidCallback onTap) {
 }
 
 class _goalChip extends StatelessWidget {
-  final String text;
+  final String title;
   final bool completed;
-  final String? progress;
+  final String progress;
 
-  const _goalChip(this.text, this.completed, {this.progress, super.key});
+  const _goalChip(
+    this.title,
+    this.completed, {
+    required this.progress,
+    super.key,
+  });
+
+  double _calculatePercent() {
+    final parts = progress.split('/');
+    if (parts.length != 2) return 0;
+    final current = int.tryParse(parts[0]) ?? 0;
+    final total = int.tryParse(parts[1]) ?? 1;
+    return total == 0 ? 0 : current / total;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: completed
-              ? const Color.fromARGB(255, 132, 235, 137).withOpacity(0.2)
-              : const Color(0xFFECEFF1),
+    final percent = _calculatePercent();
 
-          borderRadius: BorderRadius.circular(12),
+    final Color primaryBlue = const Color(0xFF42A5F5);
+    final Color accentBlue = const Color(0xFF81D4FA);
+
+    return Expanded(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: completed
+              ? const LinearGradient(
+                  colors: [Color(0xFF42A5F5), Color(0xFF81D4FA)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: completed ? null : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: completed
+                  ? primaryBlue.withOpacity(0.25)
+                  : Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              completed ? Icons.check_circle : Icons.circle_outlined,
-              color: completed
-                  ? const Color.fromARGB(255, 82, 193, 87)
-                  : Colors.grey,
+            // --- ICON ---
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: completed
+                    ? Colors.white.withOpacity(0.25)
+                    : primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                completed ? Icons.check_circle : Icons.track_changes,
+                color: completed ? Colors.white : primaryBlue,
+                size: 20,
+              ),
             ),
-            const SizedBox(height: 6),
+
+            const SizedBox(height: 12),
+
+            // --- TITLE ---
             Text(
-              progress != null ? "$text\n$progress complete" : text,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12),
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: completed ? Colors.white : Colors.black87,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            // --- PROGRESS TEXT ---
+            Text(
+              "$progress complete",
+              style: TextStyle(
+                fontSize: 12,
+                color: completed ? Colors.white70 : Colors.grey[600],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // --- PROGRESS BAR ---
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: percent,
+                minHeight: 6,
+                backgroundColor: completed
+                    ? Colors.white.withOpacity(0.3)
+                    : Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  completed ? Colors.white : primaryBlue,
+                ),
+              ),
             ),
           ],
         ),
