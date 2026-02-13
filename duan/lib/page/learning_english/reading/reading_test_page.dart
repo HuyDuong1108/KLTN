@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'reading_result_page.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class ReadingTestPage extends StatefulWidget {
   final String testId;
@@ -112,6 +114,33 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
     );
   }
 
+  Future<void> _updateDailyGoal() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    final docRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('dailyGoals')
+        .doc(today);
+
+    final snap = await docRef.get();
+
+    // Nếu chưa có document thì tạo mới
+    if (!snap.exists) {
+      await docRef.set({
+        "listeningReadingCount": 1,
+        "flashcardSetCount": 0,
+        "speakingCount": 0,
+        "date": today,
+      });
+    } else {
+      await docRef.update({"listeningReadingCount": FieldValue.increment(1)});
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -192,6 +221,7 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
       "questions": result['questionResults'],
       "passages": passages,
     });
+    await _updateDailyGoal();
 
     if (!mounted) return;
 

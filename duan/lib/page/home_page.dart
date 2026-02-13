@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'homeaction/chatgemni.dart';
 import 'profile/statistics/statistics_detail_page.dart';
+import 'package:intl/intl.dart';
 
 // dữ liệu từ API
 import '../data/stats_api.dart';
@@ -246,7 +247,12 @@ class _HomePageContentState extends State<HomePageContent> {
                   ),
                   _quickPracticeButton(
                     Icons.mic,
-                    const Color.fromARGB(255, 241, 62, 71), // xanh ngọc speaking
+                    const Color.fromARGB(
+                      255,
+                      241,
+                      62,
+                      71,
+                    ), // xanh ngọc speaking
                     () {
                       Navigator.push(
                         context,
@@ -264,14 +270,57 @@ class _HomePageContentState extends State<HomePageContent> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  _goalChip("Complete daily lesson", true),
-                  _goalChip("Review 10 flashcards", true),
-                  _goalChip("Practice speaking", false),
-                ],
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(FirebaseAuth.instance.currentUser!.uid)
+                    .collection('dailyGoals')
+                    .doc(DateFormat('yyyy-MM-dd').format(DateTime.now()))
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || !snapshot.data!.exists) {
+                    return Row(
+                      children: const [
+                        _goalChip("Daily lesson", false, progress: "0/2"),
+                        _goalChip("Flashcards", false, progress: "0/2"),
+                        _goalChip("Speaking", false, progress: "0/5"),
+                      ],
+                    );
+                  }
+
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+
+                  final lessonDone = data['lessonCompleted'] ?? false;
+                  final flashDone = data['flashcardCompleted'] ?? false;
+                  final speakingDone = data['speakingCompleted'] ?? false;
+
+                  final lessonProgress =
+                      "${data['listeningReadingCount'] ?? 0}/2";
+                  final flashProgress = "${data['flashcardSetCount'] ?? 0}/2";
+                  final speakingProgress = "${data['speakingCount'] ?? 0}/5";
+
+                  return Row(
+                    children: [
+                      _goalChip(
+                        "Daily lesson",
+                        lessonDone,
+                        progress: lessonProgress,
+                      ),
+                      _goalChip(
+                        "Flashcards",
+                        flashDone,
+                        progress: flashProgress,
+                      ),
+                      _goalChip(
+                        "Speaking",
+                        speakingDone,
+                        progress: speakingProgress,
+                      ),
+                    ],
+                  );
+                },
               ),
+
               const SizedBox(height: 20),
 
               const Text(
@@ -355,7 +404,9 @@ class _goalChip extends StatelessWidget {
           children: [
             Icon(
               completed ? Icons.check_circle : Icons.circle_outlined,
-              color: completed ? const Color.fromARGB(255, 82, 193, 87) : Colors.grey,
+              color: completed
+                  ? const Color.fromARGB(255, 82, 193, 87)
+                  : Colors.grey,
             ),
             const SizedBox(height: 6),
             Text(

@@ -6,6 +6,8 @@ import '../../models/vocabulary.dart';
 import '../../data/lingua_api_service.dart';
 import 'study_result_pages.dart';
 import '../../data/set_review_history_store.dart';
+import 'package:intl/intl.dart';
+
 
 class FlashcardStudyPage extends StatefulWidget {
   final List<Vocabulary> vocabList;
@@ -44,6 +46,33 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
     tts.setSpeechRate(0.4);
     tts.setPitch(1.1);
   }
+Future<void> _updateFlashcardDailyGoal() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  final docRef = FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .collection('dailyGoals')
+      .doc(today);
+
+  final snap = await docRef.get();
+
+  if (!snap.exists) {
+    await docRef.set({
+      "listeningReadingCount": 0,
+      "flashcardSetCount": 1,
+      "speakingCount": 0,
+      "date": today,
+    });
+  } else {
+    await docRef.update({
+      "flashcardSetCount": FieldValue.increment(1),
+    });
+  }
+}
 
   void speak(String text) => tts.speak(text);
 
@@ -398,6 +427,7 @@ class _FlashcardStudyPageState extends State<FlashcardStudyPage> {
       );
     } catch (_) {}
 
+await _updateFlashcardDailyGoal();
 
     Navigator.pushReplacement(
       context,

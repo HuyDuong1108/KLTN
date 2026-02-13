@@ -5,6 +5,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+
 
 class WritingTestPage extends StatefulWidget {
   final String testId;
@@ -49,6 +52,34 @@ class _WritingTestPageState extends State<WritingTestPage> {
       _loading = false;
     });
   }
+Future<void> _updateDailyGoal() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  final docRef = FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .collection('dailyGoals')
+      .doc(today);
+
+  final snap = await docRef.get();
+
+  // Nếu chưa có document thì tạo mới
+  if (!snap.exists) {
+    await docRef.set({
+      "listeningReadingCount": 1,
+      "flashcardSetCount": 0,
+      "speakingCount": 0,
+      "date": today,
+    });
+  } else {
+    await docRef.update({
+      "listeningReadingCount": FieldValue.increment(1),
+    });
+  }
+}
 
   Future<void> _loadTestAndStartTimer() async {
     final doc = await FirebaseFirestore.instance
@@ -262,6 +293,8 @@ Only return raw JSON.
       },
       "aiResult": null,
     });
+    await _updateDailyGoal();
+
 
     final aiData = await _callGeminiAI(task1: task1, task2: task2);
 
