@@ -96,7 +96,7 @@ class _FlashcardSetDetailPageState extends State<FlashcardSetDetailPage> {
 
   Future<void> _speak(String text) async {
     try {
-      await _flutterTts.setLanguage("ja-JP");
+      await _flutterTts.setLanguage("en-US");
       await _flutterTts.setSpeechRate(0.5);
       await _flutterTts.setVolume(1.0);
       await _flutterTts.stop();
@@ -107,7 +107,7 @@ class _FlashcardSetDetailPageState extends State<FlashcardSetDetailPage> {
   Future<String> translateToVietnamese({
     required String word,
     required String meaningEn,
-    required String language, // "ja" | "ko" | "zh"
+    required String language, 
   }) async {
     final apiKey = dotenv.env['API_KEY'];
     final url =
@@ -115,10 +115,9 @@ class _FlashcardSetDetailPageState extends State<FlashcardSetDetailPage> {
 
     final prompt =
         '''
-Bạn là từ điển học ngôn ngữ.
+Bạn là từ điển học ngôn ngữ tiếng anh.
 
 Từ: "$word"
-Ngôn ngữ: $language
 Nhiệm vụ:
 - Trả về NGHĨA TIẾNG VIỆT ngắn gọn
 - Nếu có meaning tiếng Anh thì dùng để suy luận: "$meaningEn"
@@ -146,7 +145,6 @@ Chỉ trả về TEXT, không markdown.
 
   Future<Map<String, String>> fetchPronunciationAndMeaning({
     required String word,
-    required String language, // ja | zh | ko
   }) async {
     final apiKey = dotenv.env['API_KEY'];
     final url =
@@ -154,16 +152,12 @@ Chỉ trả về TEXT, không markdown.
 
     final prompt =
         """
-Bạn là từ điển học ngôn ngữ.
+Bạn là từ điển học ngôn ngữ tiếng anh.
 
 Từ: "$word"
-Ngôn ngữ: $language
 
 Yêu cầu:
-- Trả về phát âm LATIN:
-  + ja → romaji
-  + zh → pinyin (có dấu)
-  + ko → hangul latin
+- Trả về phát âm chuẩn ielts tiếng anh
 - Trả về nghĩa tiếng Việt NGẮN GỌN
 
 CHỈ TRẢ VỀ JSON:
@@ -177,7 +171,7 @@ KHÔNG OBJECT, KHÔNG ARRAY
 
 Ví dụ hợp lệ:
 {
-  "pronunciation": "taberu",
+  "pronunciation": "/i:t/",
   "meaning_vi": "ăn"
 }
 
@@ -508,7 +502,7 @@ Ví dụ hợp lệ:
 
               final prompt =
                   """
-Bạn là trợ lý học từ vựng.
+Bạn là trợ lý học từ vựng tiếng anh.
 
 Nhiệm vụ:
 - Tạo MỘT câu ví dụ NGẮN, TỰ NHIÊN 
@@ -584,11 +578,9 @@ Format JSON bắt buộc:
 
                 final snap = await docRef.get();
 
-                // 2️⃣ Clone vocabList hiện tại
                 final docData = snap.data() as Map<String, dynamic>;
 
                 final List vocabListRaw = List.from(docData['vocabList'] ?? []);
-                // 3️⃣ Tạo vocab mới (FULL FIELD – KHÔNG MẤT DATA)
                 final updatedVocab = {
                   "word": vocab.word,
                   "romaji": vocab.romaji,
@@ -599,10 +591,8 @@ Format JSON bắt buộc:
                   "exampleExplain": result['explanation'],
                 };
 
-                // 4️⃣ Ghi đè đúng index
                 vocabListRaw[index] = updatedVocab;
 
-                // 5️⃣ Update lại TOÀN BỘ vocabList
                 if (allowSave) {
                   await docRef.update({"vocabList": vocabListRaw});
                 }
@@ -619,7 +609,7 @@ Format JSON bắt buộc:
                 });
               } catch (e) {
                 setState(() {
-                  geminiResult = "❌ Lỗi Gemini: $e";
+                  geminiResult = "Lỗi Gemini: $e";
                   isLoading = false;
                 });
               }
@@ -666,7 +656,7 @@ Format JSON bắt buộc:
 
                     Text(
                       vocab.romaji,
-                      style: const TextStyle(color: Colors.grey),
+                      style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic,),
                     ),
 
                     const SizedBox(height: 6),
@@ -679,7 +669,7 @@ Format JSON bắt buộc:
                     const Divider(height: 30),
 
                     const Text(
-                      "📘 Ví dụ & giải thích (AI)",
+                      "Ví dụ & giải thích (AI)",
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
@@ -707,7 +697,7 @@ Format JSON bắt buộc:
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text("ĐÓNG"),
+                        child: const Text("ĐÓNG", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),),
                       ),
                     ),
                   ],
@@ -876,71 +866,7 @@ Format JSON bắt buộc:
     );
   }
 
-  String detectLanguage({
-    required String word,
-    String? reading, // vocab.romaji
-  }) {
-    final text = word.trim();
-    final rd = (reading ?? '').trim().toLowerCase();
-
-    final jpKana = RegExp(r'[\u3040-\u30ff]'); // Hiragana + Katakana
-    final krHangul = RegExp(r'[\uac00-\ud7af]'); // Hangul
-    final han = RegExp(r'[\u4e00-\u9fff]'); // Han (Chinese characters, also used in JP)
-
-    if (krHangul.hasMatch(text)) return 'ko';
-    if (jpKana.hasMatch(text)) return 'ja';
-
-    if (han.hasMatch(text)) {
-
-      if (rd.isNotEmpty) {
-        final looksChinese =
-            rd.contains('zh') || rd.contains(' x') || rd.contains(' q') || rd.contains('x') || rd.contains('q') || rd.contains(' ') ||
-            RegExp(r'[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]').hasMatch(rd);
-
-        if (looksChinese) return 'zh';
-        return 'ja';
-      }
-
-      return 'other';
-    }
-
-    return 'other';
-  }
-  String _flagEmoji(String lang) {
-    final c = lang.toLowerCase().trim();
-    if (c == 'ja' || c == 'jp') return '🇯🇵';
-    if (c == 'ko' || c == 'kr') return '🇰🇷';
-    if (c == 'zh' || c == 'cn') return '🇨🇳';
-    return '🏳️';
-  }
-
-  String _langLabel(String lang) {
-    final c = lang.toLowerCase().trim();
-    if (c == 'ja' || c == 'jp') return 'Japanese';
-    if (c == 'ko' || c == 'kr') return 'Korean';
-    if (c == 'zh' || c == 'cn') return 'Chinese';
-    return 'Other';
-  }
-
-  Widget _langFlagPill({required String lang}) {
-    final emoji = _flagEmoji(lang);
-    final label = _langLabel(lang);
-
-    return Tooltip(
-      message: label,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.blue.shade200, width: 1.2),
-        ),
-        child: Text(emoji, style: const TextStyle(fontSize: 12)),
-      ),
-    );
-  }
-
-
+  
 
   Future<void> _deleteVocabulary(int index) async {
     final userId = FirebaseAuth.instance.currentUser!.uid;
@@ -1401,11 +1327,8 @@ Format JSON bắt buộc:
                     onChanged: (v) async {
                       if (v.trim().isEmpty) return;
 
-                      final lang = detectLanguage(word: v);
-
                       final result = await fetchPronunciationAndMeaning(
                         word: v,
-                        language: lang,
                       );
 
                       setState(() {
