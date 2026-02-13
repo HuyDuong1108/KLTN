@@ -5,6 +5,10 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+
 
 
 class SpeakingPage extends StatefulWidget {
@@ -174,7 +178,9 @@ Return JSON only:
         score = decoded['score'];
         feedback = decoded['feedback'];
         isLoading = false;
-      });
+      }
+      );
+      await _updateSpeakingGoal();
     } catch (e) {
       setState(() => isLoading = false);
     }
@@ -201,7 +207,7 @@ Return JSON only:
         localeId: 'en_US',
 
         listenFor: const Duration(seconds: 100),
-        pauseFor: const Duration(seconds: 3),
+        pauseFor: const Duration(seconds: 2),
         onResult: (result) {
           setState(() {
             userSpeech = result.recognizedWords;
@@ -253,6 +259,43 @@ Return JSON only:
       ),
     );
   }
+
+  Future<void> _updateSpeakingGoal() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final todayId = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  final docRef = FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .collection('dailyGoals')
+      .doc(todayId);
+
+  final snapshot = await docRef.get();
+
+  if (!snapshot.exists) {
+    // Nếu chưa có document hôm nay → tạo mới
+    await docRef.set({
+      'speakingCount': 1,
+      'speakingCompleted': false,
+      'lessonCompleted': false,
+      'flashcardCompleted': false,
+      'listeningReadingCount': 0,
+      'flashcardSetCount': 0,
+    });
+  } else {
+    final data = snapshot.data()!;
+    int current = data['speakingCount'] ?? 0;
+    current++;
+
+    await docRef.update({
+      'speakingCount': current,
+      'speakingCompleted': current >= 5,
+    });
+  }
+}
+
 
   Widget _buildTopSettings() {
     return Container(
