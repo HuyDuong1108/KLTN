@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
 import 'writing_test_page.dart';
 import 'writing_review_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class WritingPage extends StatelessWidget {
+class WritingPage extends StatefulWidget {
   const WritingPage({super.key});
+
+  @override
+  State<WritingPage> createState() => _WritingPageState();
+}
+
+class _WritingPageState extends State<WritingPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  List<DocumentSnapshot> _results = [];
+  Map<String, Map<String, dynamic>> _latestResultByTest = {};
+
+  bool _loading = true;
+  List<DocumentSnapshot> _tests = [];
 
   // ===== COLORS =====
   static const Color primaryBlue = Color(0xFF1976D2);
@@ -26,78 +39,153 @@ class WritingPage extends StatelessWidget {
         ),
       ),
 
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _overviewCard(),
-          const SizedBox(height: 28),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _overviewCard(),
+                const SizedBox(height: 28),
 
-          const Text(
-            "Full Writing Tests",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
+                const Text(
+                  "Full Writing Tests",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
 
-          // ===== DONE =====
-          _writingTestCard(
-            context: context,
-            title: "IELTS Writing Test 1",
-            completed: true,
-            band: 6.5,
-            task1Words: 170,
-            task2Words: 280,
-          ),
+                ..._tests.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final result = _latestResultByTest[doc.id];
+                  final ai = result?['aiResult'];
+                  final tasks = result?['tasks'];
 
-          // ===== NOT DONE =====
-          _writingTestCard(
-            context: context,
-            title: "IELTS Writing Test 2",
-            completed: false,
-          ),
-        ],
-      ),
+                  return _writingTestCard(
+                    context: context,
+                    testId: doc.id,
+                    title: data['title'],
+                    completed: result != null,
+                    band: ai?['overallBand'],
+                    task1Words: tasks?['task1']?['wordCount'],
+                    task2Words: tasks?['task2']?['wordCount'],
+                    resultId: result?['id'],
+                  );
+                }).toList(),
+              ],
+            ),
     );
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _loadWritingTests();
+  }
+Future<void> _loadWritingTests() async {
+  try {
+    final testSnapshot = await _firestore
+        .collection('writing_tests')
+        .orderBy('createdAt')
+        .get();
+
+    final resultSnapshot = await _firestore
+        .collection('writing_results')
+        .orderBy('submittedAt', descending: true)
+        .get();
+
+    final Map<String, Map<String, dynamic>> latestResultByTest = {};
+
+    for (final doc in resultSnapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final testId = data['testId'];
+
+      if (data['aiResult'] != null &&
+          !latestResultByTest.containsKey(testId)) {
+        latestResultByTest[testId] = {
+          ...data,
+          'id': doc.id,
+        };
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _tests = List<DocumentSnapshot>.from(testSnapshot.docs);
+      _latestResultByTest = latestResultByTest;
+      _loading = false;
+    });
+  } catch (e) {
+    print("🔥 WritingPage Load Error: $e");
+
+    if (!mounted) return;
+
+    setState(() {
+      _tests = [];
+      _latestResultByTest = {};
+      _loading = false;
+    });
+  }
+}
+  
   // ================= OVERVIEW =================
   Widget _overviewCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFBBDEFB), Color(0xFFE3F2FD)],
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.edit, size: 40, color: primaryBlue),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                "Writing Progress",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 6),
-              Text("Completed: 1 / 10"),
-              Text("Average Band: 6.5"),
-            ],
-          ),
-        ],
-      ),
-    );
+  final completed = _latestResultByTest.length;
+  final total = _tests.length;
+
+  double totalBand = 0.0;
+  int counted = 0;
+
+  for (final e in _latestResultByTest.values) {
+    final ai = e['aiResult'];
+    if (ai != null && ai['overallBand'] != null) {
+      totalBand += (ai['overallBand'] as num).toDouble();
+      counted++;
+    }
   }
 
+  final averageBand =
+      counted == 0 ? 0.0 : totalBand / counted;
+
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(20),
+      gradient: const LinearGradient(
+        colors: [Color(0xFFBBDEFB), Color(0xFFE3F2FD)],
+      ),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.edit, size: 40, color: primaryBlue),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Writing Progress",
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text("Completed: $counted / $total"),
+            Text("Average Band: ${averageBand.toStringAsFixed(1)}"),
+          ],
+        ),
+      ],
+    ),
+  );
+}
   // ================= TEST CARD =================
   Widget _writingTestCard({
     required BuildContext context,
+    required String testId,
     required String title,
     required bool completed,
     double? band,
     int? task1Words,
     int? task2Words,
+    String? resultId,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
@@ -140,7 +228,9 @@ class WritingPage extends StatelessWidget {
           if (completed) ...[
             Row(
               children: [
-                _infoChip("Band $band"),
+                _infoChip(
+                  "Band ${band != null ? band.toStringAsFixed(1) : "N/A"}",
+                ),
                 const SizedBox(width: 4),
                 _infoChip("T1: $task1Words words"),
                 const SizedBox(width: 4),
@@ -149,17 +239,68 @@ class WritingPage extends StatelessWidget {
             ),
 
             const SizedBox(height: 14),
-            _primaryButton(
-              text: "Review Writing",
-              icon: Icons.analytics_outlined,
-              color: primaryBlue,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const WritingReviewPage()),
-                );
-              },
+
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                WritingReviewPage(resultId: resultId!),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.analytics_outlined),
+                      label: const Text(
+                        "Review",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryBlue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => WritingTestPage(testId: testId),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text(
+                        "Test Again",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: softBlue,
+                        side: BorderSide(color: softBlue, width: 1.6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ] else ...[
             const Text("Not attempted", style: TextStyle(color: textGrey)),
@@ -172,7 +313,8 @@ class WritingPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const WritingTestPage()),
+                    builder: (_) => WritingTestPage(testId: testId),
+                  ),
                 );
               },
             ),

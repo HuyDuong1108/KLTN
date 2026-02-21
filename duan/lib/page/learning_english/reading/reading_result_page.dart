@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'reading_review_page.dart';
 
 class ReadingResultPage extends StatelessWidget {
-  const ReadingResultPage({super.key});
+  final String resultId;
+
+  const ReadingResultPage({super.key, required this.resultId});
 
   // ================= COLORS =================
   static const Color primaryBlue = Color(0xFF1976D2);
@@ -27,27 +31,48 @@ class ReadingResultPage extends StatelessWidget {
       ),
 
       // ================= BODY =================
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _overallResultCard(),
-          const SizedBox(height: 20),
-          _bandDescriptorCard(),
-          const SizedBox(height: 20),
-          _questionTypeAnalysis(),
-          const SizedBox(height: 20),
-          _questionResultList(),
-          const SizedBox(height: 24),
-          _reviewButtons(context),
-          const SizedBox(height: 20),
-          _improvementTips(),
-        ],
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('reading_results')
+            .doc(resultId)
+            .get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _overallResultCard(data),
+              const SizedBox(height: 20),
+              _bandDescriptorCard(data['band']),
+              const SizedBox(height: 20),
+              _questionTypeAnalysis(data['typeScore']),
+              const SizedBox(height: 20),
+              _improvementTips(data),
+              const SizedBox(height: 24),
+              _reviewButtons(context),
+              const SizedBox(height: 20),
+            ],
+          );
+        },
       ),
     );
   }
 
   // ================= OVERALL RESULT =================
-  Widget _overallResultCard() {
+  Widget _overallResultCard(Map<String, dynamic> data) {
+    final int correct = data['correct'];
+    final int incorrect = data['incorrect'];
+    final double band = data['band'];
+    final int seconds = data['durationUsed'];
+
+    final String time =
+        "${seconds ~/ 60}m ${(seconds % 60).toString().padLeft(2, '0')}s";
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -60,14 +85,11 @@ class ReadingResultPage extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            "Overall Reading Band",
-            style: TextStyle(color: Colors.white70),
-          ),
+        children: [
+          Text("Overall Reading Band", style: TextStyle(color: Colors.white70)),
           SizedBox(height: 6),
           Text(
-            "6.5",
+            band.toString(),
             style: TextStyle(
               fontSize: 42,
               fontWeight: FontWeight.bold,
@@ -77,10 +99,17 @@ class ReadingResultPage extends StatelessWidget {
           SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
             children: [
-              _ResultStat(label: "Correct", value: "28 / 40"),
-              _ResultStat(label: "Accuracy", value: "70%"),
-              _ResultStat(label: "Time", value: "52m 30s"),
+              _ResultStat(
+                label: "Correct",
+                value: "$correct / ${correct + incorrect}",
+              ),
+              _ResultStat(
+                label: "Accuracy",
+                value: "${(correct / (correct + incorrect) * 100).round()}%",
+              ),
+              _ResultStat(label: "Time", value: time),
             ],
           ),
         ],
@@ -89,30 +118,81 @@ class ReadingResultPage extends StatelessWidget {
   }
 
   // ================= BAND DESCRIPTOR =================
-  Widget _bandDescriptorCard() {
+  Widget _bandDescriptorCard(double band) {
+    final descriptor = _getBandDescriptor(band);
+
     return _card(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Text(
-            "Band 6.5 Descriptor",
-            style: TextStyle(
+            "Band $band Descriptor",
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
               color: primaryBlue,
             ),
           ),
-          SizedBox(height: 10),
-          Text("• Understands main ideas and specific details."),
-          Text("• Can locate information but may struggle with inference."),
-          Text("• Errors mainly occur in NOT GIVEN and paraphrasing questions."),
+          const SizedBox(height: 10),
+
+          ...descriptor.map(
+            (line) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text("• $line"),
+            ),
+          ),
         ],
       ),
     );
   }
 
+  List<String> _getBandDescriptor(double band) {
+    if (band >= 7.5) {
+      return [
+        "Demonstrates a very strong understanding of complex texts.",
+        "Accurately identifies main ideas, details, and writer’s opinions.",
+        "Handles paraphrasing and inference questions with high accuracy.",
+        "Rarely makes mistakes in NOT GIVEN questions.",
+      ];
+    }
+
+    if (band >= 7.0) {
+      return [
+        "Understands both main ideas and supporting details clearly.",
+        "Can locate information efficiently across the passage.",
+        "Occasional mistakes occur in inference or matching questions.",
+        "Overall reading strategy is effective.",
+      ];
+    }
+
+    if (band >= 6.5) {
+      return [
+        "Understands main ideas and most specific details.",
+        "Can locate information but may struggle with paraphrased content.",
+        "Errors mainly occur in NOT GIVEN and inference questions.",
+        "Needs to improve speed and keyword recognition.",
+      ];
+    }
+
+    if (band >= 6.0) {
+      return [
+        "Understands general meaning but misses some specific details.",
+        "Has difficulty with paraphrasing and matching information.",
+        "Inference questions are often answered incorrectly.",
+        "Needs to improve scanning and skimming skills.",
+      ];
+    }
+
+    return [
+      "Has limited understanding of the overall passage.",
+      "Struggles to locate specific information accurately.",
+      "Frequently confused by paraphrasing and NOT GIVEN questions.",
+      "Needs significant improvement in basic reading strategies.",
+    ];
+  }
+
   // ================= QUESTION TYPE ANALYSIS =================
-  Widget _questionTypeAnalysis() {
+  Widget _questionTypeAnalysis(Map<String, dynamic> typeScore) {
     return _card(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,13 +206,39 @@ class ReadingResultPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _typeRow("Multiple Choice", "6 / 8", successGreen),
-          _typeRow("TRUE / FALSE / NOT GIVEN", "4 / 8", errorRed),
-          _typeRow("Sentence Completion", "3 / 5", Colors.orange),
-          _typeRow("Matching Information", "5 / 7", successGreen),
+          ...typeScore.entries.map((e) {
+            final correct = e.value['correct'];
+            final total = e.value['total'];
+
+            final double rate = correct / total;
+
+            final Color color;
+            if (rate >= 0.7) {
+              color = successGreen; // xanh
+            } else if (rate >= 0.4) {
+              color = Colors.orange; // cam
+            } else {
+              color = errorRed; // đỏ
+            }
+
+            return _typeRow(_prettyTypeName(e.key), "$correct / $total", color);
+          }).toList(),
         ],
       ),
     );
+  }
+
+  String _prettyTypeName(String raw) {
+    switch (raw) {
+      case "MCQ":
+        return "Multiple Choice";
+      case "TFNG":
+        return "TRUE / FALSE / NOT GIVEN";
+      case "SENTENCE":
+        return "Sentence Completion";
+      default:
+        return raw;
+    }
   }
 
   Widget _typeRow(String type, String score, Color color) {
@@ -149,89 +255,7 @@ class ReadingResultPage extends StatelessWidget {
             ),
             child: Text(
               score,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ================= QUESTION RESULT LIST =================
-  Widget _questionResultList() {
-    return _card(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Question Review",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: primaryBlue,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          _questionItem(1, true, "B", "B"),
-          _questionItem(2, false, "TRUE", "FALSE"),
-          _questionItem(3, true, "NOT GIVEN", "NOT GIVEN"),
-          _questionItem(4, false, "A", "D"),
-          _questionItem(5, true, "congestion", "congestion"),
-        ],
-      ),
-    );
-  }
-
-  Widget _questionItem(
-    int number,
-    bool correct,
-    String userAnswer,
-    String correctAnswer,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: correct ? successGreen : errorRed,
-          width: 1.2,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            correct ? Icons.check_circle : Icons.cancel,
-            color: correct ? successGreen : errorRed,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Question $number",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Your answer: $userAnswer",
-                  style: const TextStyle(color: textGrey),
-                ),
-                if (!correct)
-                  Text(
-                    "Correct answer: $correctAnswer",
-                    style: const TextStyle(
-                      color: errorRed,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -244,35 +268,55 @@ class ReadingResultPage extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Navigate to review with passage
-            },
-            icon: const Icon(Icons.menu_book),
-            label: const Text("Review with Passage"),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              foregroundColor: primaryBlue,
-              side: const BorderSide(color: primaryBlue),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            height: 40,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              icon: const Icon(Icons.menu_book, size: 18),
+              label: const Text(
+                "Back to Reading",
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primaryBlue,
+                side: const BorderSide(color: primaryBlue),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
         ),
+
         const SizedBox(width: 12),
         Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Navigate to review by question
-            },
-            icon: const Icon(Icons.analytics),
-            label: const Text("Review Answers"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            height: 40,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ReadingReviewPage(resultId: resultId),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.analytics, size: 18, color: Colors.white),
+              label: const Text(
+                "Review Answers",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -282,23 +326,106 @@ class ReadingResultPage extends StatelessWidget {
   }
 
   // ================= IMPROVEMENT TIPS =================
-  Widget _improvementTips() {
+  Widget _improvementTips(Map<String, dynamic> data) {
+    final tips = _generateTips(
+      band: data['band'],
+      typeScore: data['typeScore'],
+    );
+
     return _card(
-      Row(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Icon(Icons.lightbulb, color: Colors.orange),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              "Tip: Be careful with NOT GIVEN questions. Avoid using your own knowledge "
-              "and focus strictly on information stated in the passage.",
-              style: TextStyle(fontSize: 14),
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.lightbulb, color: Colors.orange),
+              SizedBox(width: 8),
+              Text(
+                "Teacher's Feedback",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          ...tips.map(
+            (t) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                "• $t",
+                style: const TextStyle(fontSize: 14, height: 1.5),
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  List<String> _generateTips({
+    required double band,
+    required Map<String, dynamic> typeScore,
+  }) {
+    List<String> tips = [];
+
+    // ===== THEO BAND =====
+    if (band < 6.0) {
+      tips.add(
+        "Focus on understanding the general meaning of each paragraph before answering questions.",
+      );
+      tips.add(
+        "Improve basic skimming and scanning skills to locate keywords faster.",
+      );
+    } else if (band < 6.5) {
+      tips.add(
+        "Pay more attention to paraphrasing, especially when keywords are not repeated exactly.",
+      );
+    } else if (band < 7.0) {
+      tips.add(
+        "Work on inference questions where answers are implied rather than stated directly.",
+      );
+    } else {
+      tips.add(
+        "Your comprehension is strong. Focus on improving speed to double-check answers.",
+      );
+    }
+
+    // ===== THEO QUESTION TYPE =====
+    if (typeScore.containsKey("TFNG")) {
+      final tfng = typeScore["TFNG"];
+      if (tfng['correct'] / tfng['total'] < 0.6) {
+        tips.add(
+          "For TRUE / FALSE / NOT GIVEN questions, avoid using personal knowledge—only rely on the passage.",
+        );
+      }
+    }
+
+    if (typeScore.containsKey("SENTENCE")) {
+      final sent = typeScore["SENTENCE"];
+      if (sent['correct'] / sent['total'] < 0.6) {
+        tips.add(
+          "Sentence completion mistakes suggest difficulty with paraphrasing. Practice identifying synonym patterns.",
+        );
+      }
+    }
+
+    if (typeScore.containsKey("MCQ")) {
+      final mcq = typeScore["MCQ"];
+      if (mcq['correct'] / mcq['total'] < 0.6) {
+        tips.add(
+          "For multiple-choice questions, read the question stem carefully before checking the options.",
+        );
+      }
+    }
+
+    // ===== FALLBACK =====
+    if (tips.isEmpty) {
+      tips.add(
+        "Maintain your current reading strategy and continue practicing with full-length tests.",
+      );
+    }
+
+    return tips;
   }
 
   // ================= SHARED CARD =================
@@ -326,20 +453,14 @@ class _ResultStat extends StatelessWidget {
   final String label;
   final String value;
 
-  const _ResultStat({
-    required this.label,
-    required this.value,
-  });
+  const _ResultStat({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white70)),
         const SizedBox(height: 4),
         Text(
           value,

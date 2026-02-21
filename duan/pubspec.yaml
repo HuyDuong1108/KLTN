@@ -49,6 +49,7 @@ dependencies:
   cached_network_image: ^3.4.1       
   flutter_cache_manager: ^3.4.0
   speech_to_text: ^7.3.0
+  intl: ^0.20.2
   fl_chart: ^0.69.0
   record: ^6.2.0
   path_provider: ^2.1.5
@@ -80,6 +81,9 @@ flutter:
     - lib/image/dung.png
     - lib/image/sai.png
     - .env
+    - lib/image/test1_task1.jpg
+    - lib/image/test2_task1.png
+    - lib/image/test3_task1.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -29,8 +29,8 @@ class ContinueLearningCard extends StatelessWidget {
     final ref = FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
-        .collection('learning')
-        .doc('continue');
+        .collection('latestTest')
+        .doc('result');
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: ref.snapshots(),
@@ -39,45 +39,28 @@ class ContinueLearningCard extends StatelessWidget {
         String? lessonPath;
 
         if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data() ?? {};
+          final data = snapshot.data!.data()!;
 
-          final lessonTitle = (data['lessonTitle'] ?? '').toString();
+          final testType = data['testType'] ?? '';
+          final band = data['band'];
+          final score = data['score'];
+          final task1Words = data['task1Words'];
+          final task2Words = data['task2Words'];
+          final duration = data['durationMinutes'];
+          final reviewPath = data['reviewPath'];
 
-          final languageName = (data['languageName'] ?? '').toString();
-          final languageCode = (data['languageCode'] ?? '').toString();
+          lessonPath = reviewPath?.toString();
 
-          final courseTitle = (data['courseTitle'] ?? '').toString();
-          final courseId = (data['courseId'] ?? '').toString();
-
-          final progress = data['progressPercent'];
-          final courseSubtitle = (data['courseSubtitle'] ?? '').toString();
-
-          final langLabel = languageName.isNotEmpty
-              ? languageName
-              : (languageCode.isNotEmpty ? languageCode.toUpperCase() : "");
-
-          final courseLabel = courseTitle.isNotEmpty
-              ? courseTitle
-              : (courseId.isNotEmpty ? _prettyCourseId(courseId) : "");
-
-          if (lessonTitle.isNotEmpty) {
-            if (langLabel.isNotEmpty && courseLabel.isNotEmpty) {
-              subtitle = "$langLabel • $courseLabel\n$lessonTitle";
-            } else {
-              subtitle = lessonTitle;
-            }
-
-            if (courseSubtitle.isNotEmpty) {
-              subtitle = "$subtitle\n$courseSubtitle";
-            }
-
-            if (progress is int) {
-              subtitle = "$subtitle\nTiến độ $progress%";
-            }
+          if (testType == "Reading") {
+            subtitle =
+                "📘 Reading Test\nBand $band • Score $score\n⏱ $duration minutes";
+          } else if (testType == "Listening") {
+            subtitle =
+                "🎧 Listening Test\nBand $band • Score $score\n⏱ $duration minutes";
+          } else if (testType == "Writing") {
+            subtitle =
+                "📝 Writing Test\nBand $band\nTask 1: $task1Words words • Task 2: $task2Words words\n⏱ $duration minutes";
           }
-
-          final lp = (data['lessonPath'] ?? '').toString();
-          if (lp.isNotEmpty) lessonPath = lp;
         }
 
         String? languageCode;
@@ -224,7 +207,7 @@ class ContinueLearningCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "Continue Learning",
+                  "Latest Test Result",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -248,7 +231,7 @@ class ContinueLearningCard extends StatelessWidget {
 
                   onPressed: enabled ? onPressed : null,
                   child: const Text(
-                    "Continue",
+                    "View Review",
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,

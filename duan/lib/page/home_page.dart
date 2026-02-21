@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'homeaction/chatgemni.dart';
 import 'profile/statistics/statistics_detail_page.dart';
+import 'package:intl/intl.dart';
 
 // dữ liệu từ API
 import '../data/stats_api.dart';
@@ -12,6 +13,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/continue_learning_card.dart';
 import 'learning/japan/lesson_detail_page.dart';
 import 'homeaction/speaking_example.dart';
+import 'learning_english/reading/reading_review_page.dart';
+import 'learning_english/writing/writing_review_page.dart';
+import 'learning_english/listening/listening_review_page.dart';
 
 // Trang Home chính
 class HomePageContent extends StatefulWidget {
@@ -136,8 +140,45 @@ class _HomePageContentState extends State<HomePageContent> {
 
               // --- Continue Learning card : mới thêm ---
               ContinueLearningCard(
-                onContinue: (lessonPath) =>
-                    _openContinueLesson(context, lessonPath),
+                onContinue: (reviewPath) async {
+                  final snap = await FirebaseFirestore.instance
+                      .doc(reviewPath)
+                      .get();
+
+                  if (!context.mounted) return;
+
+                  final data = snap.data() as Map<String, dynamic>;
+                  final testType = data['testType'];
+
+                  if (reviewPath.contains("reading_results")) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReadingReviewPage(
+                          resultId: reviewPath.split('/').last,
+                        ),
+                      ),
+                    );
+                  } else if (reviewPath.contains("writing_results")) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WritingReviewPage(
+                          resultId: reviewPath.split('/').last,
+                        ),
+                      ),
+                    );
+                  } else if (reviewPath.contains("listening_results")) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ListeningReviewPage(
+                          resultId: reviewPath.split('/').last,
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
 
               //  Stats card từ backend
@@ -246,7 +287,12 @@ class _HomePageContentState extends State<HomePageContent> {
                   ),
                   _quickPracticeButton(
                     Icons.mic,
-                    const Color.fromARGB(255, 241, 62, 71), // xanh ngọc speaking
+                    const Color.fromARGB(
+                      255,
+                      241,
+                      62,
+                      71,
+                    ), // xanh ngọc speaking
                     () {
                       Navigator.push(
                         context,
@@ -264,14 +310,57 @@ class _HomePageContentState extends State<HomePageContent> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  _goalChip("Complete daily lesson", true),
-                  _goalChip("Review 10 flashcards", true),
-                  _goalChip("Practice speaking", false),
-                ],
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(FirebaseAuth.instance.currentUser!.uid)
+                    .collection('dailyGoals')
+                    .doc(DateFormat('yyyy-MM-dd').format(DateTime.now()))
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || !snapshot.data!.exists) {
+                    return Row(
+                      children: const [
+                        _goalChip("Daily Lesson", false, progress: "0/2"),
+                        _goalChip("Flashcards", false, progress: "0/2"),
+                        _goalChip("Speaking", false, progress: "0/5"),
+                      ],
+                    );
+                  }
+
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+
+                  final lessonDone = data['lessonCompleted'] ?? false;
+                  final flashDone = data['flashcardCompleted'] ?? false;
+                  final speakingDone = data['speakingCompleted'] ?? false;
+
+                  final lessonProgress =
+                      "${data['listeningReadingCount'] ?? 0}/2";
+                  final flashProgress = "${data['flashcardSetCount'] ?? 0}/2";
+                  final speakingProgress = "${data['speakingCount'] ?? 0}/5";
+
+                  return Row(
+                    children: [
+                      _goalChip(
+                        "Test Lesson",
+                        lessonDone,
+                        progress: lessonProgress,
+                      ),
+                      _goalChip(
+                        "Flashcards",
+                        flashDone,
+                        progress: flashProgress,
+                      ),
+                      _goalChip(
+                        "Speaking",
+                        speakingDone,
+                        progress: speakingProgress,
+                      ),
+                    ],
+                  );
+                },
               ),
+
               const SizedBox(height: 20),
 
               const Text(
@@ -332,36 +421,114 @@ Widget _quickPracticeButton(IconData icon, Color color, VoidCallback onTap) {
 }
 
 class _goalChip extends StatelessWidget {
-  final String text;
+  final String title;
   final bool completed;
-  final String? progress;
+  final String progress;
 
-  const _goalChip(this.text, this.completed, {this.progress, super.key});
+  const _goalChip(
+    this.title,
+    this.completed, {
+    required this.progress,
+    super.key,
+  });
+
+  double _calculatePercent() {
+    final parts = progress.split('/');
+    if (parts.length != 2) return 0;
+    final current = int.tryParse(parts[0]) ?? 0;
+    final total = int.tryParse(parts[1]) ?? 1;
+    return total == 0 ? 0 : current / total;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: completed
-              ? const Color.fromARGB(255, 132, 235, 137).withOpacity(0.2)
-              : const Color(0xFFECEFF1),
+    final percent = _calculatePercent();
 
-          borderRadius: BorderRadius.circular(12),
+    final Color primaryBlue = const Color(0xFF42A5F5);
+    final Color accentBlue = const Color(0xFF81D4FA);
+
+    return Expanded(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: completed
+              ? const LinearGradient(
+                  colors: [Color(0xFF42A5F5), Color(0xFF81D4FA)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: completed ? null : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: completed
+                  ? primaryBlue.withOpacity(0.25)
+                  : Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              completed ? Icons.check_circle : Icons.circle_outlined,
-              color: completed ? const Color.fromARGB(255, 82, 193, 87) : Colors.grey,
+            // --- ICON ---
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: completed
+                    ? Colors.white.withOpacity(0.25)
+                    : primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                completed ? Icons.check_circle : Icons.track_changes,
+                color: completed ? Colors.white : primaryBlue,
+                size: 20,
+              ),
             ),
-            const SizedBox(height: 6),
+
+            const SizedBox(height: 12),
+
+            // --- TITLE ---
             Text(
-              progress != null ? "$text\n$progress complete" : text,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12),
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: completed ? Colors.white : Colors.black87,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            // --- PROGRESS TEXT ---
+            Text(
+              "$progress complete",
+              style: TextStyle(
+                fontSize: 12,
+                color: completed ? Colors.white70 : Colors.grey[600],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // --- PROGRESS BAR ---
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: percent,
+                minHeight: 6,
+                backgroundColor: completed
+                    ? Colors.white.withOpacity(0.3)
+                    : Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  completed ? Colors.white : primaryBlue,
+                ),
+              ),
             ),
           ],
         ),

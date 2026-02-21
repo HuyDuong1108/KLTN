@@ -4,6 +4,12 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+
+
 
 class SpeakingPage extends StatefulWidget {
   const SpeakingPage({super.key});
@@ -18,11 +24,11 @@ class _SpeakingPageState extends State<SpeakingPage> {
   bool hasScored = false;
 
   // Khởi tạo các giá trị (Gán sẵn dữ liệu mẫu để bạn hình dung giao diện feedback)
-  String language = 'ja';
-  String selectedTopic = 'Giao tiếp hằng ngày';
-  String aiSentence = 'こんにちは、元気ですか？';
+  String language = 'en';
+  String selectedTopic = 'Hometown';
+  String aiSentence = 'Hello, how are you doing today?';
   String meaning = 'Xin chào, bạn khỏe không?';
-  String userSpeech = 'Konnichiwa, genki desu ka';
+  String userSpeech = 'I am doing good, thank you!';
 
   // Dữ liệu Feedback mẫu
   int? score = 85;
@@ -33,18 +39,24 @@ class _SpeakingPageState extends State<SpeakingPage> {
   bool isListening = false;
 
   final List<String> topics = [
-    'Giao tiếp hằng ngày',
-    'Du lịch & Khách sạn',
-    'Công việc & Phỏng vấn',
-    'Mua sắm & Giá cả',
-    'Nhà hàng & Ẩm thực',
-    'Sở thích & Giải trí',
+    'Hometown',
+    'Education',
+    'Work',
+    'Technology',
+    'Travel',
+    'Environment',
+    'Family',
+    'Hobbies',
   ];
 
-  final Color primaryOrange = const Color(0xFFFF7043);
-  final Color lightOrange = const Color(0xFFFFF3E0);
-  final Color darkOrange = const Color(0xFFE64A19);
-  final Color bgBackground = const Color(0xFFFDFDFD);
+  // ===== NEW COLOR SYSTEM =====
+  final Color primaryBlue = Color(
+    0xFF42A5F5,
+  ); // xanh tươi chính (giống Overall band card)
+  final Color accentBlue = Color(0xFF29B6F6); // xanh sáng nổi bật hơn
+  final Color lightBlue = Color(0xFFE3F2FD); // nền card nhẹ
+  final Color darkBlue = Color(0xFF1565C0); // xanh đậm text
+  final Color backgroundColor = Color(0xFFF5FAFF); // nền page
 
   // ===== LOGIC CHÍNH =====
 
@@ -64,9 +76,17 @@ class _SpeakingPageState extends State<SpeakingPage> {
 
     final prompt =
         '''
-Bạn là giáo viên dạy ngoại ngữ. Ngôn ngữ: $language. Chủ đề: $selectedTopic.
-Nhiệm vụ: Tạo 1 câu hội thoại ngắn và dịch sang tiếng Việt.
-Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa tiếng Việt"}
+You are an IELTS Speaking examiner.
+Topic: $selectedTopic.
+
+Task:
+Generate ONE natural English speaking question suitable for IELTS Part 1 or Part 2.
+
+Return JSON only:
+{
+  "sentence": "IELTS question here",
+  "meaning": "Vietnamese explanation"
+}
 ''';
 
     try {
@@ -112,7 +132,24 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
         'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent?key=$apiKey';
 
     final prompt =
-        'Chấm điểm phát âm. Câu chuẩn: "$aiSentence", Người nói: "$userSpeech". Trả về JSON: {"score": 85, "feedback": "..."}';
+        '''
+You are an IELTS examiner.
+
+Original question: "$aiSentence"
+Candidate answer: "$userSpeech"
+
+Score pronunciation from 0 to 100.
+Give detailed feedback on:
+- Pronunciation
+- Fluency
+- Intonation
+
+Return JSON only:
+{
+  "score": 75,
+  "feedback": "Detailed IELTS style feedback..."
+}
+''';
 
     try {
       final res = await http.post(
@@ -141,7 +178,9 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
         score = decoded['score'];
         feedback = decoded['feedback'];
         isLoading = false;
-      });
+      }
+      );
+      await _updateSpeakingGoal();
     } catch (e) {
       setState(() => isLoading = false);
     }
@@ -149,13 +188,8 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
 
   Future<void> _speak(String text) async {
     if (text.isEmpty) return;
-    await _tts.setLanguage(
-      language == 'ja'
-          ? 'ja-JP'
-          : language == 'ko'
-          ? 'ko-KR'
-          : 'zh-CN',
-    );
+    await _tts.setLanguage('en-US');
+
     await _tts.setSpeechRate(0.45);
     await _tts.speak(text);
   }
@@ -170,12 +204,9 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
         hasScored = false;
       });
       await _stt.listen(
-        localeId: language == 'ja'
-            ? 'ja_JP'
-            : language == 'ko'
-            ? 'ko_KR'
-            : 'zh_CN',
-        listenFor: const Duration(seconds: 5), 
+        localeId: 'en_US',
+
+        listenFor: const Duration(seconds: 100),
         pauseFor: const Duration(seconds: 2),
         onResult: (result) {
           setState(() {
@@ -194,16 +225,16 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgBackground,
+      backgroundColor: const Color(0xFFF4F8FF),
       appBar: AppBar(
         title: const Text(
-          "AI Speaking Coach",
-          style: TextStyle(color: Colors.white),
+          "IELTS Speaking Coach",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: primaryOrange,
-        centerTitle: true,
+        backgroundColor: primaryBlue,
         elevation: 0,
       ),
+
       body: Column(
         children: [
           _buildTopSettings(),
@@ -229,26 +260,60 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
     );
   }
 
+  Future<void> _updateSpeakingGoal() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final todayId = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  final docRef = FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .collection('dailyGoals')
+      .doc(todayId);
+
+  final snapshot = await docRef.get();
+
+  if (!snapshot.exists) {
+    // Nếu chưa có document hôm nay → tạo mới
+    await docRef.set({
+      'speakingCount': 1,
+      'speakingCompleted': false,
+      'lessonCompleted': false,
+      'flashcardCompleted': false,
+      'listeningReadingCount': 0,
+      'flashcardSetCount': 0,
+    });
+  } else {
+    final data = snapshot.data()!;
+    int current = data['speakingCount'] ?? 0;
+    current++;
+
+    await docRef.update({
+      'speakingCount': current,
+      'speakingCompleted': current >= 5,
+    });
+  }
+}
+
+
   Widget _buildTopSettings() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-      decoration: BoxDecoration(
-        color: primaryOrange,
-        borderRadius: const BorderRadius.only(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF42A5F5), Color(0xFF64B5F6)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
         ),
       ),
+
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _langBtn("🇯🇵 Nhật", "ja"),
-              _langBtn("🇰🇷 Hàn", "ko"),
-              _langBtn("🇨🇳 Trung", "zh"),
-            ],
-          ),
           const SizedBox(height: 15),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -258,7 +323,7 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
             ),
             child: DropdownButton<String>(
               value: selectedTopic,
-              dropdownColor: primaryOrange,
+              dropdownColor: primaryBlue,
               isExpanded: true,
               underline: const SizedBox(),
               icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
@@ -288,27 +353,28 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: primaryOrange.withOpacity(0.1),
+            color: primaryBlue.withOpacity(0.08),
             blurRadius: 20,
-            spreadRadius: 2,
+            offset: const Offset(0, 10),
           ),
         ],
-        border: Border.all(color: lightOrange),
       ),
+
       child: Column(
         children: [
           const Text(
-            "CÂU LUYỆN TẬP",
+            "IELTS QUESTION",
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: Colors.blueGrey,
               letterSpacing: 1.2,
             ),
           ),
+
           const SizedBox(height: 15),
           if (isLoading && aiSentence.isEmpty)
             const CircularProgressIndicator(color: Colors.orange)
@@ -319,7 +385,7 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: darkOrange,
+                color: darkBlue,
               ),
             ),
             const SizedBox(height: 8),
@@ -334,7 +400,7 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
             ),
             const SizedBox(height: 10),
             IconButton(
-              icon: Icon(Icons.volume_up, size: 30, color: primaryOrange),
+              icon: Icon(Icons.volume_up, size: 30, color: primaryBlue),
               onPressed: () => _speak(aiSentence),
             ),
           ],
@@ -353,17 +419,23 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
             height: 90,
             width: 90,
             decoration: BoxDecoration(
-              color: isListening ? Colors.redAccent : primaryOrange,
               shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: isListening
+                    ? [Colors.redAccent, Colors.red]
+                    : [primaryBlue, accentBlue],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: (isListening ? Colors.redAccent : primaryOrange)
-                      .withOpacity(0.4),
-                  blurRadius: 20,
-                  spreadRadius: 5,
+                  color: primaryBlue.withOpacity(0.4),
+                  blurRadius: 25,
+                  spreadRadius: 4,
                 ),
               ],
             ),
+
             child: Icon(
               isListening ? Icons.graphic_eq : Icons.mic,
               color: Colors.white,
@@ -374,10 +446,10 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
         const SizedBox(height: 12),
         Text(
           isLoading
-              ? "Đang chấm phát âm..."
+              ? "Evaluating your speaking..."
               : isListening
-              ? "Đang nghe... Nói đi bạn!"
-              : "Nhấn Micro để đọc",
+              ? "Listening... Speak clearly"
+              : "Tap the mic and answer",
           style: TextStyle(
             color: isListening ? Colors.red : Colors.grey[600],
             fontWeight: FontWeight.w500,
@@ -436,13 +508,14 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
       child: Column(
         children: [
           const Text(
-            "KẾT QUẢ PHÁT ÂM",
+            "SPEAKING FEEDBACK",
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.blueGrey,
               letterSpacing: 1.1,
             ),
           ),
+
           const SizedBox(height: 20),
 
           // Hiển thị điểm số dạng vòng tròn
@@ -493,12 +566,18 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
                 Icon(Icons.lightbulb_outline, color: statusColor, size: 24),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    feedback,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: Colors.black87,
+                  child: MarkdownBody(
+                    data: feedback,
+                    styleSheet: MarkdownStyleSheet(
+                      p: const TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: Colors.black87,
+                      ),
+                      strong: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
                     ),
                   ),
                 ),
@@ -523,11 +602,11 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: statusColor,
+                backgroundColor: primaryBlue,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 2,
+                elevation: 4,
               ),
             ),
           ),
@@ -551,7 +630,7 @@ Chỉ trả về JSON: {"sentence": "câu ngoại ngữ", "meaning": "nghĩa ti�
           label,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: isSelected ? primaryOrange : Colors.white,
+            color: isSelected ? primaryBlue : Colors.white,
           ),
         ),
       ),
