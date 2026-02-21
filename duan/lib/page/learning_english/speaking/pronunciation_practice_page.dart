@@ -50,7 +50,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
 
   @override
   void dispose() {
-    _cloudSpeech.dispose();
+    // Do NOT dispose the GoogleCloudSpeechService singleton from a page
     _tts.stop();
     super.dispose();
   }

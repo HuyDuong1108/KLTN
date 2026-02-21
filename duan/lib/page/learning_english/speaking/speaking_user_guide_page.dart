@@ -43,18 +43,19 @@ class SpeakingUserGuidePage extends StatelessWidget {
             icon: Icons.category,
             title: "Chọn Practice Mode",
             description:
-                "Trong tab **Practice**, bạn sẽ thấy 3 chế độ luyện tập:\n\n• **Pronunciation Practice** ← Chọn cái này\n• IELTS Speaking Test\n• AI Speaking Partner",
+                "Trong tab **Practice**, bạn sẽ thấy 3 chế độ luyện tập:\n\n• **Pronunciation Practice** - Luyện phát âm chi tiết\n• **IELTS Speaking Test** - Thi thử IELTS Speaking\n• **AI Speaking Partner** - Trò chuyện với AI như người thật",
             tips: [
-              "Pronunciation Practice: Luyện phát âm chi tiết với AI feedback",
-              "IELTS Speaking Test: Thi thử IELTS Speaking",
-              "AI Speaking Partner: Trò chuyện với AI như người thật",
+              "Pronunciation Practice: Phân tích từng âm, từng từ",
+              "IELTS Speaking Test: Mô phỏng kỳ thi thật",
+              "AI Speaking Partner: Hội thoại tự nhiên, chấm IELTS 4 tiêu chí",
             ],
           ),
+          _buildAIPartnerStep(context),
           _buildStep(
             context,
-            stepNumber: "3",
+            stepNumber: "4",
             icon: Icons.school,
-            title: "Chọn Category (Danh mục)",
+            title: "Chọn Category (Danh mục) - Pronunciation",
             description:
                 "Chọn 1 trong 3 category để luyện tập:\n\n**Individual Sounds** - Luyện âm đơn khó (th, r, v, w...)\n**Word Stress** - Trọng âm từ (PHOto vs phoTOgraphy)\n**Sentence Intonation** - Ngữ điệu câu (lên xuống)",
             tips: [
@@ -64,7 +65,7 @@ class SpeakingUserGuidePage extends StatelessWidget {
           ),
           _buildStep(
             context,
-            stepNumber: "4",
+            stepNumber: "5",
             icon: Icons.headset,
             title: "Nghe câu mẫu",
             description:
@@ -77,7 +78,7 @@ class SpeakingUserGuidePage extends StatelessWidget {
           ),
           _buildStep(
             context,
-            stepNumber: "5",
+            stepNumber: "6",
             icon: Icons.mic,
             title: "Ghi âm (Recording)",
             description:
@@ -91,7 +92,7 @@ class SpeakingUserGuidePage extends StatelessWidget {
           ),
           _buildStep(
             context,
-            stepNumber: "6",
+            stepNumber: "7",
             icon: Icons.cloud_upload,
             title: "Xử lý (Processing)",
             description:
@@ -104,7 +105,7 @@ class SpeakingUserGuidePage extends StatelessWidget {
           ),
           _buildStep(
             context,
-            stepNumber: "7",
+            stepNumber: "8",
             icon: Icons.analytics,
             title: "Xem kết quả nhanh",
             description:
@@ -117,7 +118,7 @@ class SpeakingUserGuidePage extends StatelessWidget {
           ),
           _buildStep(
             context,
-            stepNumber: "8",
+            stepNumber: "9",
             icon: Icons.visibility,
             title: "Xem chi tiết (Review Page)",
             description:
@@ -131,7 +132,7 @@ class SpeakingUserGuidePage extends StatelessWidget {
           ),
           _buildStep(
             context,
-            stepNumber: "9",
+            stepNumber: "10",
             icon: Icons.trending_up,
             title: "Xem tiến độ (Progress Tab)",
             description:
@@ -144,20 +145,20 @@ class SpeakingUserGuidePage extends StatelessWidget {
           ),
           _buildStep(
             context,
-            stepNumber: "10",
+            stepNumber: "11",
             icon: Icons.history,
             title: "Xem lịch sử (History Tab)",
             description:
-                "Tab **History** → Danh sách tất cả session đã luyện\n\nMỗi session hiển thị:\n• Thời gian luyện\n• Band score\n• Category\n• Số lỗi\n\nNhấn vào session → Mở lại review page",
+                "Tab **History** hiển thị 2 mục riêng biệt:\n\n🤖 **AI Conversations** - Các buổi hội thoại với AI Partner\n   → Nhấn để xem lại toàn bộ Q&A, feedback từng lượt\n\n🎙️ **Pronunciation Practice** - Các lần luyện phát âm\n   → Nhấn để mở lại review page với transcript màu",
             tips: [
-              "So sánh band score giữa các lần luyện",
-              "Xem lại lỗi cũ để tránh lặp lại",
-              "Luyện lại câu cũ để cải thiện",
+              "Hai mục lịch sử riêng — dễ phân biệt loại luyện tập",
+              "AI Conversations: xem band score + feedback tiếng Việt từng lượt",
+              "So sánh Band score qua các buổi để thấy tiến bộ",
             ],
           ),
           _buildStep(
             context,
-            stepNumber: "11",
+            stepNumber: "12",
             icon: Icons.repeat,
             title: "Luyện lại & Next Sentence",
             description:
@@ -314,6 +315,217 @@ class SpeakingUserGuidePage extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildAIPartnerStep(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00897B).withOpacity(0.10),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFF00897B).withOpacity(0.25)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00897B),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: Text(
+                    "3",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.smart_toy, color: Color(0xFF00897B), size: 22),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "AI Speaking Partner",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF00897B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Phase cards
+          const Text(
+            "Chức năng trò chuyện tự nhiên với AI — được chấm điểm IELTS 4 tiêu chí sau mỗi lượt.",
+            style: TextStyle(fontSize: 15, height: 1.6, color: Colors.black87),
+          ),
+          const SizedBox(height: 14),
+
+          // Phase 1
+          _buildAIPhaseRow(
+            icon: Icons.topic,
+            color: const Color(0xFF1976D2),
+            label: "Bước 1 — Chọn chủ đề",
+            desc:
+                "9 chủ đề IELTS mặc định (Education, Technology...) hoặc chế độ Free Conversation. AI cũng gợi ý thêm chủ đề linh hoạt.",
+          ),
+          const SizedBox(height: 10),
+
+          // Phase 2
+          _buildAIPhaseRow(
+            icon: Icons.mic,
+            color: const Color(0xFF00897B),
+            label: "Bước 2 — Hội thoại (5 lượt, ~5 phút)",
+            desc:
+                "AI hỏi → Bạn nhấn giữ mic để trả lời → AI phản hồi bằng giọng nói en-GB. Mỗi lượt có đồng hồ đếm ngược. Nhấn Skip nếu muốn bỏ qua.",
+          ),
+          const SizedBox(height: 10),
+
+          // Phase 3
+          _buildAIPhaseRow(
+            icon: Icons.bar_chart,
+            color: const Color(0xFFFB8C00),
+            label: "Bước 3 — Kết quả & cải thiện",
+            desc:
+                "Xem Band Score tổng thể + 4 tiêu chí (Fluency, Lexical, Grammar, Pronunciation). Nhấn vào từng lượt để đọc feedback tiếng Việt chi tiết.",
+          ),
+
+          const SizedBox(height: 14),
+
+          // Tips box (teal)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00897B).withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.lightbulb, color: Color(0xFF00897B), size: 18),
+                    SizedBox(width: 6),
+                    Text(
+                      "Tips:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF00897B),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...[
+                  "Nhấn giữ nút mic, nói xong thì thả (tap-and-hold)",
+                  "AI sẽ nhớ context cả buổi — nói tự nhiên như nói chuyện thật",
+                  "Feedback SnackBar nhỏ xuất hiện sau mỗi lượt, không làm ngắt luồng",
+                  "Profile nói được cập nhật sau 3 lần mắc lỗi giống nhau",
+                  "Xem lại chi tiết trong tab History → AI Conversations",
+                ].map(
+                  (tip) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "• ",
+                          style: TextStyle(
+                            color: Color(0xFF00897B),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            tip,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAIPhaseRow({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String desc,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                desc,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black87,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

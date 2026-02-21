@@ -84,7 +84,7 @@ class GoogleCloudSpeechService {
   GoogleCloudSpeechService._();
   static final GoogleCloudSpeechService instance = GoogleCloudSpeechService._();
 
-  final AudioRecorder _recorder = AudioRecorder();
+  AudioRecorder _recorder = AudioRecorder();
   static const Duration _maxRecordingDuration = Duration(seconds: 10);
   String? _currentRecordingPath;
 
@@ -226,5 +226,7 @@ class GoogleCloudSpeechService {
 
   void dispose() {
     _recorder.dispose();
+    // Recreate immediately so the singleton stays usable after page dispose calls
+    _recorder = AudioRecorder();
   }
 }

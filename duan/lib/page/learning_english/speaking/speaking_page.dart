@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'ielts_speaking_test_page.dart';
 import 'ai_speaking_partner_page.dart';
+import 'ai_partner_review_page.dart';
 import 'pronunciation_practice_page.dart';
 import 'speaking_review_page.dart';
 import 'speaking_user_guide_page.dart';
 import '../../../data/speaking_session_store.dart';
+import '../../../data/ai_partner_store.dart';
 import '../../../models/speaking_session.dart';
+import '../../../models/ai_partner_session.dart';
 
 class SpeakingPage extends StatefulWidget {
   const SpeakingPage({super.key});
@@ -23,6 +26,7 @@ class _SpeakingPageState extends State<SpeakingPage>
 
   late TabController _tabController;
   final _sessionStore = SpeakingSessionStore.instance;
+  final _aiPartnerStore = AiPartnerStore.instance;
 
   @override
   void initState() {
@@ -178,43 +182,227 @@ class _SpeakingPageState extends State<SpeakingPage>
   }
 
   Widget _historyTab() {
-    return StreamBuilder<List<SpeakingSession>>(
-      stream: _sessionStore.watchSessions(limit: 50),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.history, size: 64, color: textGrey.withOpacity(0.5)),
-                const SizedBox(height: 16),
-                Text(
-                  "No practice sessions yet",
-                  style: TextStyle(fontSize: 18, color: textGrey),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Start practicing to see your history",
-                  style: TextStyle(color: textGrey),
-                ),
-              ],
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // ── AI Conversations Section ──
+        Row(
+          children: [
+            const Icon(Icons.smart_toy, color: Color(0xFF00897B), size: 20),
+            const SizedBox(width: 8),
+            const Text(
+              'AI Conversations',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF00897B),
+              ),
             ),
-          );
-        }
-
-        final sessions = snapshot.data!;
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: sessions.length,
-          itemBuilder: (context, index) {
-            return _historySessionCard(sessions[index]);
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<AiPartnerSession>>(
+          stream: _aiPartnerStore.watchSessions(limit: 30),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final aiSessions = snapshot.data ?? [];
+            if (aiSessions.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.smart_toy,
+                        size: 40,
+                        color: textGrey.withOpacity(0.4),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'No AI conversations yet',
+                        style: TextStyle(color: textGrey),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return Column(
+              children: aiSessions
+                  .map((s) => _aiPartnerSessionCard(s))
+                  .toList(),
+            );
           },
-        );
-      },
+        ),
+
+        const SizedBox(height: 24),
+
+        // ── Pronunciation Practice Section ──
+        Row(
+          children: [
+            const Icon(Icons.record_voice_over, color: primaryBlue, size: 20),
+            const SizedBox(width: 8),
+            const Text(
+              'Pronunciation Practice',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: primaryBlue,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<SpeakingSession>>(
+          stream: _sessionStore.watchSessions(limit: 50),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final sessions = snapshot.data ?? [];
+            if (sessions.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.history,
+                        size: 40,
+                        color: textGrey.withOpacity(0.4),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'No practice sessions yet',
+                        style: TextStyle(color: textGrey),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return Column(
+              children: sessions.map((s) => _historySessionCard(s)).toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _aiPartnerSessionCard(AiPartnerSession session) {
+    final Color bandColor = session.overallBand >= 7.0
+        ? Colors.green
+        : session.overallBand >= 5.5
+        ? Colors.orange
+        : Colors.red;
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AiPartnerReviewPage(session: session),
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00897B).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.smart_toy,
+                color: Color(0xFF00897B),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          session.isFreeMode
+                              ? 'Free Conversation'
+                              : session.topic,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: bandColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Band ${session.overallBand.toStringAsFixed(1)}',
+                          style: TextStyle(
+                            color: bandColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${session.turns.length} turns',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF607D8B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Color(0xFF607D8B), size: 20),
+          ],
+        ),
+      ),
     );
   }
 
