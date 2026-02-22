@@ -11,7 +11,6 @@ import '../models/stats_summary.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/continue_learning_card.dart';
-import 'learning/japan/lesson_detail_page.dart';
 import 'homeaction/speaking_example.dart';
 import 'learning_english/reading/reading_review_page.dart';
 import 'learning_english/writing/writing_review_page.dart';
@@ -57,33 +56,7 @@ class _HomePageContentState extends State<HomePageContent> {
     return "there";
   }
 
-  Future<void> _openContinueLesson(
-    BuildContext context,
-    String lessonPath,
-  ) async {
-    try {
-      final snap = await FirebaseFirestore.instance.doc(lessonPath).get();
-      if (!snap.exists) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Không tìm thấy bài học để tiếp tục.")),
-        );
-        return;
-      }
-
-      if (!context.mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => LessonDetailPage(lessonDoc: snap)),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Lỗi mở bài học: $e")));
-    }
-  }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
