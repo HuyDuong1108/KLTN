@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// bổ sung thêm 
+// bổ sung thêm
 import '../../data/stats_api.dart';
 import '../../models/stats_summary.dart';
 import 'statistics/statistics_detail_page.dart';
@@ -9,9 +9,10 @@ import 'statistics/statistics_detail_page.dart';
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
- @override
+  @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
+
 class _ProfilePageState extends State<ProfilePage> {
   late Future<StatsSummary> _statsFuture;
 
@@ -21,14 +22,14 @@ class _ProfilePageState extends State<ProfilePage> {
     _statsFuture = StatsApi.instance.fetchSummary();
   }
 
- Future<void> _refresh() async {
+  Future<void> _refresh() async {
     setState(() {
       _statsFuture = StatsApi.instance.fetchSummary();
     });
     await _statsFuture;
   }
 
-   @override
+  @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -55,7 +56,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 20),
                   _achievements(),
                   const SizedBox(height: 20),
-                  _languages(),
+                  _skillProgress(),
                   const SizedBox(height: 20),
                   _logoutButton(context),
                 ],
@@ -106,7 +107,10 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text(
                   user?.email?.split('@')[0] ?? "User Name",
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   user?.email ?? "No Email",
@@ -123,9 +127,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     onPressed: () {},
-                    child: const Text("Edit Profile", style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      "Edit Profile",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -150,47 +157,46 @@ class _ProfilePageState extends State<ProfilePage> {
     final successText = successAll == null ? "—%" : _pct(successAll);
 
     return InkWell(
-  borderRadius: BorderRadius.circular(18),
-  onTap: () {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const StatisticsDetailPage()),
-    );
-  },
-  child: Container(
-    padding: const EdgeInsets.all(16),
-    decoration: _boxDecoration(),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Learning Statistics",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-
-        if (error)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              "Không tải được thống kê (kéo xuống để refresh).",
-              style: TextStyle(color: Colors.red.shade400),
-            ),
-          ),
-
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      borderRadius: BorderRadius.circular(18),
+      onTap: () {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const StatisticsDetailPage()));
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: _boxDecoration(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _statItem(Icons.calendar_month, daysText),
-            _statItem(Icons.local_fire_department, streakText),
-            _statItem(Icons.star, xpText),
-            _statItem(Icons.check_circle, successText),
-          ],
-        )
-      ],
-    ),
-  ),
-);
+            const Text(
+              "Learning Statistics",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
 
+            if (error)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  "Không tải được thống kê (kéo xuống để refresh).",
+                  style: TextStyle(color: Colors.red.shade400),
+                ),
+              ),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _statItem(Icons.calendar_month, daysText),
+                _statItem(Icons.local_fire_department, streakText),
+                _statItem(Icons.star, xpText),
+                _statItem(Icons.check_circle, successText),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _statItem(IconData icon, String value) {
@@ -213,7 +219,10 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Achievements", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            "Achievements",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
 
           Row(
@@ -224,7 +233,7 @@ class _ProfilePageState extends State<ProfilePage> {
               _achievementIcon("💎", "Perfect Score"),
               _achievementIcon("🏅", "Silver Badge"),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -241,98 +250,126 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   // ----------------------------------------------------------
-  // 🌍 LANGUAGE PROGRESS (đang hardcode, chưa nối backend)
+  // 🎯 SKILL PROGRESS – PASTEL STYLE (MATCH LEARNING PAGE)
   // ----------------------------------------------------------
-  Widget _languages() {
+  Widget _skillProgress() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: _boxDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("My Languages", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const Text(
+            "IELTS Skill Progress",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
 
-          _languageItem(
-            flag: "🇯🇵",
-            name: "Japanese",
-            level: 4,
-            progress: 0.72,
-            words: 350,
-            gradient: [Colors.red, Colors.pinkAccent],
+          _skillItem(
+            icon: Icons.headphones,
+            skill: "Listening",
+            band: 6.0,
+            progress: 0.7,
+            color: const Color(0xFF4FC3F7),
           ),
-          const SizedBox(height: 22),
 
-          _languageItem(
-            flag: "🇰🇷",
-            name: "Korean",
-            level: 3,
-            progress: 0.45,
-            words: 210,
-            gradient: [Colors.blue, Colors.lightBlueAccent],
+          const SizedBox(height: 18),
+
+          _skillItem(
+            icon: Icons.menu_book,
+            skill: "Reading",
+            band: 6.0,
+            progress: 0.75,
+            color: const Color(0xFFFFB74D),
           ),
-          const SizedBox(height: 22),
 
-          _languageItem(
-            flag: "🇨🇳",
-            name: "Chinese",
-            level: 2,
-            words: 150,
-            progress: 0.30,
-            gradient: [Colors.orange, Colors.deepOrangeAccent],
+          const SizedBox(height: 18),
+
+          _skillItem(
+            icon: Icons.edit,
+            skill: "Writing",
+            band: 5.5,
+            progress: 0.6,
+            color: const Color(0xFFBA68C8),
+          ),
+
+          const SizedBox(height: 18),
+
+          _skillItem(
+            icon: Icons.record_voice_over,
+            skill: "Speaking",
+            band: 5.0,
+            progress: 0.55,
+            color: const Color(0xFF81C784),
           ),
         ],
       ),
     );
   }
 
-  Widget _languageItem({
-    required String flag,
-    required String name,
-    required int level,
+  Widget _skillItem({
+    required IconData icon,
+    required String skill,
+    required double band,
     required double progress,
-    required int words,
-    required List<Color> gradient,
+    required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.12),
-            blurRadius: 12,
+            color: color.withOpacity(0.18),
+            blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(flag, style: const TextStyle(fontSize: 40)),
-          const SizedBox(width: 18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "$name  •  Level $level",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    height: 10,
-                    decoration: BoxDecoration(gradient: LinearGradient(colors: gradient)),
-                    width: progress * 200,
-                  ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(width: 12),
+
+              Text(
+                skill,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 6),
-                Text("$words words learned", style: TextStyle(color: Colors.grey.shade600)),
-              ],
+              ),
+
+              const Spacer(),
+
+              Text(
+                "Band ${band.toStringAsFixed(1)}",
+                style: TextStyle(color: color, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: color.withOpacity(0.12),
+              valueColor: AlwaysStoppedAnimation(color),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -342,37 +379,33 @@ class _ProfilePageState extends State<ProfilePage> {
   // LOGOUT BUTTON
   // ----------------------------------------------------------
   Widget _logoutButton(BuildContext context) {
-  return SizedBox(
-    width: double.infinity,
-    height: 52,
-    child: OutlinedButton.icon(
-      icon: const Icon(Icons.logout_rounded),
-      label: const Text(
-        "Log Out",
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        icon: const Icon(Icons.logout_rounded),
+        label: const Text(
+          "Log Out",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFFD32F2F), // đỏ dịu
+          side: const BorderSide(
+            color: Color(0xFFEF9A9A), // viền đỏ nhạt
+            width: 1.5,
+          ),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        onPressed: () async {
+          await FirebaseAuth.instance.signOut();
+          Navigator.pop(context);
+        },
       ),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFFD32F2F), // đỏ dịu
-        side: const BorderSide(
-          color: Color(0xFFEF9A9A), // viền đỏ nhạt
-          width: 1.5,
-        ),
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
-      onPressed: () async {
-        await FirebaseAuth.instance.signOut();
-        Navigator.pop(context);
-      },
-    ),
-  );
-}
-
+    );
+  }
 
   // ----------------------------------------------------------
   // DECORATION
@@ -386,7 +419,7 @@ class _ProfilePageState extends State<ProfilePage> {
           color: Colors.black.withOpacity(0.05),
           spreadRadius: 2,
           blurRadius: 8,
-        )
+        ),
       ],
     );
   }
