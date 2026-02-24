@@ -55,7 +55,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _learningStatistics(stats, error: snapshot.hasError),
 
                   const SizedBox(height: 20),
-                  _achievements(),
+                  _achievements(stats),
                   const SizedBox(height: 20),
                   _skillProgress(),
                   const SizedBox(height: 20),
@@ -220,10 +220,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ----------------------------------------------------------
-  // 🏆 ACHIEVEMENTS
-  // ----------------------------------------------------------
-  Widget _achievements() {
+  Widget _achievements(StatsSummary? stats) {
+    final streak = stats?.streakCurrent ?? 0;
+    final xp = stats?.xpTotal ?? 0;
+    final success = stats?.successRateAllTime ?? 0.0;
+    final days = stats?.daysActiveTotal ?? 0;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: _boxDecoration(),
@@ -239,10 +241,47 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _achievementIcon("🔥", "7-Day Streak"),
-              _achievementIcon("⚡", "Fast Learner"),
-              _achievementIcon("💎", "Perfect Score"),
-              _achievementIcon("🏅", "Silver Badge"),
+              _achievementItem(
+                emoji: "🔥",
+                label: "7-Day Streak",
+                unlocked: streak >= 7,
+                activeColor: Colors.orange,
+                description:
+                    "Maintain a learning streak for 7 consecutive days.",
+                requirement: "Reach 7-day streak",
+                current: streak.toDouble(),
+                target: 7,
+              ),
+              _achievementItem(
+                emoji: "⚡",
+                label: "Fast Learner",
+                unlocked: xp >= 1000,
+                activeColor: Colors.blue,
+                description: "Earn 1000 XP from practice activities.",
+                requirement: "Reach 1000 XP",
+                current: xp.toDouble(),
+                target: 1000,
+              ),
+              _achievementItem(
+                emoji: "💎",
+                label: "Perfect Score",
+                unlocked: success >= 0.9,
+                activeColor: Colors.purple,
+                description: "Achieve 90%+ overall success rate.",
+                requirement: "Reach 90% accuracy",
+                current: success * 100,
+                target: 90,
+              ),
+              _achievementItem(
+                emoji: "🏅",
+                label: "Silver Badge",
+                unlocked: days >= 30,
+                activeColor: Colors.amber,
+                description: "Stay active for 30 learning days.",
+                requirement: "Reach 30 active days",
+                current: days.toDouble(),
+                target: 30,
+              ),
             ],
           ),
         ],
@@ -250,13 +289,181 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _achievementIcon(String emoji, String label) {
-    return Column(
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 32)),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 13)),
-      ],
+  Widget _achievementItem({
+    required String emoji,
+    required String label,
+    required bool unlocked,
+    required Color activeColor,
+    required String description,
+    required String requirement,
+    required double current,
+    required double target,
+  }) {
+    final color = unlocked ? activeColor : Colors.grey.shade400;
+
+    return GestureDetector(
+      onTap: () {
+        _showAchievementDetail(
+          emoji: emoji,
+          title: label,
+          unlocked: unlocked,
+          activeColor: activeColor,
+          description: description,
+          requirement: requirement,
+          current: current,
+          target: target,
+        );
+      },
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: unlocked
+                  ? activeColor.withOpacity(0.15)
+                  : Colors.grey.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Text(emoji, style: TextStyle(fontSize: 28, color: color)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAchievementDetail({
+    required String emoji,
+    required String title,
+    required bool unlocked,
+    required Color activeColor,
+    required String description,
+    required String requirement,
+    required double current,
+    required double target,
+  }) {
+    final progress = (current / target).clamp(0.0, 1.0);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: unlocked
+                      ? activeColor.withOpacity(0.15)
+                      : Colors.grey.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  emoji,
+                  style: TextStyle(
+                    fontSize: 40,
+                    color: unlocked ? activeColor : Colors.grey,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF607D8B)),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ===== PROGRESS =====
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Progress: ${current.toStringAsFixed(0)} / ${target.toStringAsFixed(0)}",
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: Colors.grey.withOpacity(0.15),
+                  valueColor: AlwaysStoppedAnimation(activeColor),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: unlocked
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  unlocked ? "Achieved 🎉" : requirement,
+                  style: TextStyle(
+                    color: unlocked ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
     );
   }
 
