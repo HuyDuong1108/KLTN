@@ -21,6 +21,17 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _statsFuture = StatsApi.instance.fetchSummary();
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   Future.delayed(const Duration(seconds: 1), () {
+    //     _showUnlockDialog(
+    //       emoji: "🔥",
+    //       title: "7-Day Streak",
+    //       message:
+    //           "You maintained a 7-day learning streak!\nKeep going to build stronger habits.",
+    //       color: Colors.orange,
+    //     );
+    //   });
+    // });
   }
 
   Future<void> _refresh() async {
@@ -522,6 +533,124 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showUnlockDialog({
+    required String emoji,
+    required String title,
+    required String message,
+    required Color color,
+  }) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "",
+      barrierColor: Colors.black.withOpacity(0.4),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (_, __, ___) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 320,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 30,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "✨ Achievement Unlocked ✨",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1565C0),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Icon lớn
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color.withOpacity(0.15),
+                    ),
+                    child: Text(
+                      emoji,
+                      style: TextStyle(fontSize: 48, color: color),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF607D8B),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: color,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        "Continue",
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (_, animation, __, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutBack,
+            ),
+            child: child,
+          ),
+        );
+      },
     );
   }
 
