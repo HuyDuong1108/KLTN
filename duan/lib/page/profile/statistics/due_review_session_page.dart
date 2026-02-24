@@ -555,7 +555,7 @@ class _DueReviewSessionPageState extends State<DueReviewSessionPage> {
             title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           body: Center(child: Text(msg)),
-          backgroundColor: Colors.grey.shade100,
+          backgroundColor: Color(0xFFF3F9FF),
         ),
       );
     }
