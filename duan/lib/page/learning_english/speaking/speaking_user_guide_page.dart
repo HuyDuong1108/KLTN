@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class SpeakingUserGuidePage extends StatelessWidget {
   const SpeakingUserGuidePage({super.key});
@@ -250,12 +251,19 @@ class SpeakingUserGuidePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.6,
-              color: Colors.black87,
+          MarkdownBody(
+            data: description,
+            styleSheet: MarkdownStyleSheet(
+              p: const TextStyle(
+                fontSize: 15,
+                height: 1.6,
+                color: Colors.black87,
+              ),
+              strong: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: primaryBlue,
+              ),
+              listBullet: const TextStyle(fontSize: 15, color: primaryBlue),
             ),
           ),
           if (tips != null && tips.isNotEmpty) ...[

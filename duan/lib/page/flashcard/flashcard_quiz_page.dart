@@ -210,7 +210,7 @@ class _FlashcardQuizPageState extends State<FlashcardQuizPage> {
     final vocab = widget.vocabList[currentIndex];
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(
         backgroundColor: Colors.blue,
         title: const Text("Flashcard Quiz"),
