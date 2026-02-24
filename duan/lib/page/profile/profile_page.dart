@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/stats_api.dart';
 import '../../models/stats_summary.dart';
 import 'statistics/statistics_detail_page.dart';
+import 'edit_profile_page.dart';
 
 // update ProfilePage thành StatefulWidget
 class ProfilePage extends StatefulWidget {
@@ -126,7 +127,17 @@ class _ProfilePageState extends State<ProfilePage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditProfilePage(uid: user.uid),
+                          ),
+                        );
+                      }
+                    },
                     child: const Text(
                       "Edit Profile",
                       style: TextStyle(color: Colors.white),
