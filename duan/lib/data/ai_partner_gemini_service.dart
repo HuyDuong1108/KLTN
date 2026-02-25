@@ -27,17 +27,21 @@ class TurnScoreResult {
     required this.weaknesses,
   });
 
-  factory TurnScoreResult.fromJson(Map<String, dynamic> j) => TurnScoreResult(
-    fluency: (j['fluency'] as num?)?.toDouble() ?? 5.0,
-    lexical: (j['lexical'] as num?)?.toDouble() ?? 5.0,
-    grammar: (j['grammar'] as num?)?.toDouble() ?? 5.0,
-    pronunciation: (j['pronunciation'] as num?)?.toDouble() ?? 5.0,
-    overallBand: (j['overallBand'] as num?)?.toDouble() ?? 5.0,
-    feedbackVN: j['feedbackVN'] as String? ?? '',
-    improvementTip: j['improvementTip'] as String? ?? '',
-    strengths: List<String>.from(j['strengths'] as List? ?? []),
-    weaknesses: List<String>.from(j['weaknesses'] as List? ?? []),
-  );
+  factory TurnScoreResult.fromJson(Map<String, dynamic> j) {
+    // IELTS bands are only ever x.0 or x.5
+    double r(num? v) => ((v?.toDouble() ?? 5.0) * 2).round() / 2;
+    return TurnScoreResult(
+      fluency: r(j['fluency'] as num?),
+      lexical: r(j['lexical'] as num?),
+      grammar: r(j['grammar'] as num?),
+      pronunciation: r(j['pronunciation'] as num?),
+      overallBand: r(j['overallBand'] as num?),
+      feedbackVN: j['feedbackVN'] as String? ?? '',
+      improvementTip: j['improvementTip'] as String? ?? '',
+      strengths: List<String>.from(j['strengths'] as List? ?? []),
+      weaknesses: List<String>.from(j['weaknesses'] as List? ?? []),
+    );
+  }
 }
 
 class AiPartnerGeminiService {

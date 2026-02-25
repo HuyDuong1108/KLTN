@@ -523,8 +523,12 @@ class _AISpeakingPartnerPageState extends State<AISpeakingPartnerPage>
           .where((t) => t.userTranscript != '(skipped)')
           .toList();
 
-      double calcAvg(List<double> vals) =>
-          vals.isEmpty ? 0.0 : vals.reduce((a, b) => a + b) / vals.length;
+      // IELTS bands are only x.0 or x.5 → round to nearest 0.5
+      double calcAvg(List<double> vals) {
+        if (vals.isEmpty) return 0.0;
+        final avg = vals.reduce((a, b) => a + b) / vals.length;
+        return (avg * 2).round() / 2;
+      }
 
       final avgFluency = calcAvg(
         scoredTurns.map((t) => t.fluencyScore).toList(),

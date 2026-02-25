@@ -10,6 +10,9 @@ import '../../../data/speaking_session_store.dart';
 import '../../../data/ai_partner_store.dart';
 import '../../../models/speaking_session.dart';
 import '../../../models/ai_partner_session.dart';
+import '../../../data/ielts_speaking_store.dart';
+import '../../../models/ielts_speaking_session.dart';
+import 'ielts_speaking_result_page.dart';
 
 class SpeakingPage extends StatefulWidget {
   const SpeakingPage({super.key});
@@ -27,6 +30,7 @@ class _SpeakingPageState extends State<SpeakingPage>
   late TabController _tabController;
   final _sessionStore = SpeakingSessionStore.instance;
   final _aiPartnerStore = AiPartnerStore.instance;
+  final _ieltsStore = IeltsSpeakingStore.instance;
 
   @override
   void initState() {
@@ -149,35 +153,952 @@ class _SpeakingPageState extends State<SpeakingPage>
   }
 
   Widget _progressTab() {
-    return StreamBuilder(
+    return StreamBuilder<SpeakingStats>(
       stream: _sessionStore.watchStats(),
-      builder: (context, statsSnapshot) {
-        final stats = statsSnapshot.data;
+      builder: (context, statsSnap) {
+        return StreamBuilder<List<SpeakingSession>>(
+          stream: _sessionStore.watchSessions(limit: 20),
+          builder: (context, pronSnap) {
+            return StreamBuilder<List<AiPartnerSession>>(
+              stream: _aiPartnerStore.watchSessions(limit: 20),
+              builder: (context, aiSnap) {
+                return StreamBuilder<List<IeltsSpeakingSession>>(
+                  stream: _ieltsStore.watchSessions(limit: 20),
+                  builder: (context, ieltsSnap) {
+                    if (statsSnap.connectionState == ConnectionState.waiting ||
+                        pronSnap.connectionState == ConnectionState.waiting ||
+                        aiSnap.connectionState == ConnectionState.waiting ||
+                        ieltsSnap.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final stats = statsSnap.data;
+                    final pronSessions = pronSnap.data ?? [];
+                    final aiSessions = aiSnap.data ?? [];
+                    final ieltsSessions = ieltsSnap.data ?? [];
+                    final hasAnyData =
+                        (stats != null && stats.totalSessions > 0) ||
+                        aiSessions.isNotEmpty ||
+                        ieltsSessions.isNotEmpty;
 
-        return FutureBuilder<List<SpeakingSession>>(
-          future: _sessionStore.getSessions(limit: 20),
-          builder: (context, sessionsSnapshot) {
-            if (!sessionsSnapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
+                    if (!hasAnyData) {
+                      return _progressEmptyState();
+                    }
 
-            final sessions = sessionsSnapshot.data!;
-
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _statsOverviewCard(stats),
-                const SizedBox(height: 24),
-                _bandScoreChartCard(sessions),
-                const SizedBox(height: 24),
-                _errorBreakdownCard(stats),
-                const SizedBox(height: 24),
-                _achievementsCard(stats),
-              ],
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                      children: [
+                        _dashboardSummaryRow(stats, aiSessions, ieltsSessions),
+                        const SizedBox(height: 20),
+                        if (stats != null && stats.commonErrors.isNotEmpty) ...[
+                          _errorBreakdownCard(stats),
+                          const SizedBox(height: 20),
+                        ],
+                        _recentActivityCard(pronSessions, aiSessions),
+                        const SizedBox(height: 20),
+                        _achievementsCard(stats, aiSessions, ieltsSessions),
+                      ],
+                    );
+                  },
+                );
+              },
             );
           },
         );
       },
+    );
+  }
+
+  Widget _progressEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.bar_chart, size: 72, color: textGrey.withOpacity(0.3)),
+          const SizedBox(height: 16),
+          const Text(
+            'No data yet',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: textGrey,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Complete a practice session\nto see your progress here',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: textGrey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 1. Summary KPI row ──────────────────────────────────────
+  Widget _dashboardSummaryRow(
+    SpeakingStats? stats,
+    List<AiPartnerSession> aiSessions,
+    List<IeltsSpeakingSession> ieltsSessions,
+  ) {
+    final pronCount = stats?.totalSessions ?? 0;
+    final aiCount = aiSessions.length;
+    final ieltsCount = ieltsSessions.length;
+    final totalSessions = pronCount + aiCount + ieltsCount;
+
+    double overallBand = 0;
+    if (aiSessions.isNotEmpty) {
+      final aiAvg =
+          aiSessions.map((s) => s.overallBand).reduce((a, b) => a + b) /
+          aiSessions.length;
+      overallBand = aiAvg;
+    } else if (stats != null && stats.averageBandScore > 0) {
+      overallBand = stats.averageBandScore;
+    }
+    // Round to nearest IELTS 0.5
+    final displayBand = overallBand > 0 ? (overallBand * 2).round() / 2 : 0.0;
+    final bandColor = displayBand >= 7.0
+        ? Colors.green
+        : displayBand >= 5.5
+        ? Colors.orange
+        : displayBand > 0
+        ? Colors.red
+        : textGrey;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _kpiCard(
+            icon: Icons.layers,
+            iconColor: primaryBlue,
+            label: 'Total\nSessions',
+            value: '$totalSessions',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _kpiCard(
+            icon: Icons.grade,
+            iconColor: bandColor,
+            label: 'Overall\nBand',
+            value: displayBand > 0 ? displayBand.toStringAsFixed(1) : '—',
+            valueColor: bandColor,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _kpiCard(
+            icon: Icons.smart_toy,
+            iconColor: const Color(0xFF00897B),
+            label: 'AI Conv.\nSessions',
+            value: '$aiCount',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _kpiCard(
+            icon: Icons.headset_mic,
+            iconColor: const Color(0xFF7B1FA2),
+            label: 'IELTS\nTests',
+            value: '$ieltsCount',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _kpiCard({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: valueColor ?? primaryBlue,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, color: textGrey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 2. AI 4-Criteria card ────────────────────────────────────
+  Widget _aiCriteriaCard(List<AiPartnerSession> aiSessions) {
+    if (aiSessions.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.smart_toy, color: Color(0xFF00897B), size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'AI Speaking Partner — bắt đầu hội thoại đầu tiên\nđể xem phân tích 4 tiêu chí IELTS',
+                style: const TextStyle(color: textGrey, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final fluency =
+        aiSessions.map((s) => s.avgFluency).reduce((a, b) => a + b) /
+        aiSessions.length;
+    final lexical =
+        aiSessions.map((s) => s.avgLexical).reduce((a, b) => a + b) /
+        aiSessions.length;
+    final grammar =
+        aiSessions.map((s) => s.avgGrammar).reduce((a, b) => a + b) /
+        aiSessions.length;
+    final pronunciation =
+        aiSessions.map((s) => s.avgPronunciation).reduce((a, b) => a + b) /
+        aiSessions.length;
+
+    const teal = Color(0xFF00897B);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.smart_toy, color: teal, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'IELTS Speaking — 4 Tiêu Chí',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: teal,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: teal.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${aiSessions.length} sessions',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: teal,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _criteriaRow('Fluency & Coherence', fluency, Colors.blue),
+          const SizedBox(height: 12),
+          _criteriaRow('Lexical Resource', lexical, Colors.purple),
+          const SizedBox(height: 12),
+          _criteriaRow('Grammatical Range', grammar, Colors.orange),
+          const SizedBox(height: 12),
+          _criteriaRow('Pronunciation', pronunciation, Colors.teal),
+        ],
+      ),
+    );
+  }
+
+  Widget _criteriaRow(String label, double score, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 12, color: textGrey)),
+            Text(
+              score.toStringAsFixed(1),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: score / 9.0,
+            backgroundColor: Colors.grey.shade100,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 8,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── 3. Band trend chart (both sources) ──────────────────────
+  Widget _bandTrendCard(
+    List<SpeakingSession> pronSessions,
+    List<AiPartnerSession> aiSessions,
+    List<IeltsSpeakingSession> ieltsSessions,
+  ) {
+    // Build a combined timeline of (date, band, source)
+    final List<Map<String, dynamic>> combined = [
+      ...pronSessions.map(
+        (s) => {'date': s.timestamp, 'band': s.bandScore, 'source': 'pron'},
+      ),
+      ...aiSessions.map(
+        (s) => {'date': s.startedAt, 'band': s.overallBand, 'source': 'ai'},
+      ),
+      ...ieltsSessions.map(
+        (s) => {'date': s.startedAt, 'band': s.overallBand, 'source': 'ielts'},
+      ),
+    ];
+    combined.sort(
+      (a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime),
+    );
+
+    // Take last 12
+    final shown = combined.length > 12
+        ? combined.sublist(combined.length - 12)
+        : combined;
+
+    // Single combined series with colored dots per source
+    final allSpots = <FlSpot>[];
+    for (int i = 0; i < shown.length; i++) {
+      final band = (shown[i]['band'] as double).clamp(0.0, 9.0);
+      allSpots.add(FlSpot(i.toDouble(), band));
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.show_chart, color: primaryBlue, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Band Score Trend',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: primaryBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Legend
+          Wrap(
+            spacing: 14,
+            runSpacing: 4,
+            children: [
+              _legendDot(primaryBlue, 'Pronunciation'),
+              _legendDot(const Color(0xFF00897B), 'AI Partner'),
+              _legendDot(const Color(0xFF7B1FA2), 'IELTS Test'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 200,
+            child: LineChart(
+              LineChartData(
+                clipData: const FlClipData.all(),
+                minX: 0,
+                maxX: shown.isEmpty ? 1 : (shown.length - 1).toDouble(),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (v) =>
+                      FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+                ),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 32,
+                      interval: 1,
+                      getTitlesWidget: (v, _) => Text(
+                        v.toInt().toString(),
+                        style: const TextStyle(fontSize: 10, color: textGrey),
+                      ),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 22,
+                      interval: 1,
+                      getTitlesWidget: (v, meta) {
+                        final i = v.toInt();
+                        if (i < 0 || i >= shown.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final d = shown[i]['date'] as DateTime;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${d.day}/${d.month}',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: textGrey,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                minY: 1,
+                maxY: 9,
+                lineBarsData: [
+                  if (allSpots.isNotEmpty)
+                    LineChartBarData(
+                      spots: allSpots,
+                      isCurved: allSpots.length > 2,
+                      curveSmoothness: 0.3,
+                      color: Colors.grey.shade300,
+                      barWidth: 2,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, _, __, index) {
+                          final src = shown[index]['source'] as String;
+                          final c = src == 'pron'
+                              ? primaryBlue
+                              : src == 'ai'
+                              ? const Color(0xFF00897B)
+                              : const Color(0xFF7B1FA2);
+                          return FlDotCirclePainter(
+                            radius: 5,
+                            color: c,
+                            strokeWidth: 2,
+                            strokeColor: Colors.white,
+                          );
+                        },
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: primaryBlue.withOpacity(0.04),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11, color: textGrey)),
+      ],
+    );
+  }
+
+  // ── 4. Error breakdown ────────────────────────────────────────
+  Widget _errorBreakdownCard(SpeakingStats stats) {
+    final sorted = stats.commonErrors.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final top = sorted.take(5).toList();
+    final total = stats.commonErrors.values.fold<int>(0, (s, c) => s + c);
+    if (total == 0) return const SizedBox.shrink();
+
+    final barColors = [
+      Colors.red.shade400,
+      Colors.orange.shade400,
+      Colors.amber.shade400,
+      Colors.blue.shade300,
+      Colors.purple.shade300,
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Lỗi Phát Âm Hay Mắc',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...top.asMap().entries.map((e) {
+            final idx = e.key;
+            final entry = e.value;
+            final pct = entry.value / total;
+            final color = barColors[idx % barColors.length];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      entry.key,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        backgroundColor: Colors.grey.shade100,
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                        minHeight: 10,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 36,
+                    child: Text(
+                      '${entry.value}',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.lightbulb, color: Colors.orange, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Tập trung cải thiện: ${top.first.key}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 5. Recent activity ────────────────────────────────────────
+  Widget _recentActivityCard(
+    List<SpeakingSession> pron,
+    List<AiPartnerSession> ai,
+  ) {
+    final List<Map<String, dynamic>> items = [
+      ...pron
+          .take(3)
+          .map(
+            (s) => {
+              'title': s.category ?? 'Pronunciation',
+              'sub':
+                  'Band ${s.bandScore.toStringAsFixed(1)} · ${s.wordErrors.length} errors',
+              'date': s.timestamp,
+              'icon': Icons.record_voice_over,
+              'color': primaryBlue,
+            },
+          ),
+      ...ai
+          .take(3)
+          .map(
+            (s) => {
+              'title': s.isFreeMode ? 'Free Conversation' : s.topic,
+              'sub':
+                  'Band ${s.overallBand.toStringAsFixed(1)} · ${s.turns.length} turns',
+              'date': s.startedAt,
+              'icon': Icons.smart_toy,
+              'color': const Color(0xFF00897B),
+            },
+          ),
+    ];
+    items.sort(
+      (a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime),
+    );
+    final shown = items.take(5).toList();
+    if (shown.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.access_time, color: primaryBlue, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Hoạt Động Gần Đây',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: primaryBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...shown.map((item) {
+            final date = item['date'] as DateTime;
+            final color = item['color'] as Color;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      item['icon'] as IconData,
+                      color: color,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['title'] as String,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          item['sub'] as String,
+                          style: const TextStyle(fontSize: 11, color: textGrey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    _formatDate(date),
+                    style: const TextStyle(fontSize: 11, color: textGrey),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ── 6. Achievements ──────────────────────────────────────────
+  Widget _achievementsCard(
+    SpeakingStats? stats,
+    List<AiPartnerSession> aiSessions,
+    List<IeltsSpeakingSession> ieltsSessions,
+  ) {
+    final pronCount = stats?.totalSessions ?? 0;
+    final aiCount = aiSessions.length;
+    final ieltsCount = ieltsSessions.length;
+    final totalSessions = pronCount + aiCount + ieltsCount;
+    final avgBand = stats?.averageBandScore ?? 0.0;
+    final aiAvgBand = aiSessions.isEmpty
+        ? 0.0
+        : aiSessions.map((s) => s.overallBand).reduce((a, b) => a + b) /
+              aiSessions.length;
+    final ieltsAvgBand = ieltsSessions.isEmpty
+        ? 0.0
+        : ieltsSessions.map((s) => s.overallBand).reduce((a, b) => a + b) /
+              ieltsSessions.length;
+
+    final all = <Map<String, dynamic>>[
+      {
+        'title': 'Buổi đầu tiên',
+        'icon': Icons.celebration,
+        'color': Colors.amber,
+        'unlocked': totalSessions >= 1,
+        'desc': 'Hoàn thành 1 buổi luyện',
+      },
+      {
+        'title': '5 Buổi liên tiếp',
+        'icon': Icons.local_fire_department,
+        'color': Colors.orange,
+        'unlocked': totalSessions >= 5,
+        'desc': '5 buổi luyện tập',
+      },
+      {
+        'title': '10 Buổi',
+        'icon': Icons.military_tech,
+        'color': Colors.deepOrange,
+        'unlocked': totalSessions >= 10,
+        'desc': '10 buổi luyện tập',
+      },
+      {
+        'title': 'AI Partner',
+        'icon': Icons.smart_toy,
+        'color': const Color(0xFF00897B),
+        'unlocked': aiCount >= 1,
+        'desc': 'Bắt đầu hội thoại AI',
+      },
+      {
+        'title': 'Band 5.5+',
+        'icon': Icons.stars,
+        'color': Colors.blue,
+        'unlocked': avgBand >= 5.5 || aiAvgBand >= 5.5 || ieltsAvgBand >= 5.5,
+        'desc': 'Đạt Band 5.5',
+      },
+      {
+        'title': 'Band 7.0+',
+        'icon': Icons.emoji_events,
+        'color': Colors.amber.shade700,
+        'unlocked': avgBand >= 7.0 || aiAvgBand >= 7.0 || ieltsAvgBand >= 7.0,
+        'desc': 'Đạt Band 7.0',
+      },
+      {
+        'title': 'IELTS Test',
+        'icon': Icons.headset_mic,
+        'color': const Color(0xFF7B1FA2),
+        'unlocked': ieltsCount >= 1,
+        'desc': 'Hoàn thành IELTS test đầu tiên',
+      },
+      {
+        'title': '3 IELTS Tests',
+        'icon': Icons.workspace_premium,
+        'color': const Color(0xFF7B1FA2),
+        'unlocked': ieltsCount >= 3,
+        'desc': 'Hoàn thành 3 IELTS tests',
+      },
+      {
+        'title': 'IELTS Band 7+',
+        'icon': Icons.star_purple500,
+        'color': Colors.deepPurple,
+        'unlocked': ieltsAvgBand >= 7.0,
+        'desc': 'IELTS Band trung bình ≥ 7.0',
+      },
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.emoji_events, color: Colors.amber, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Thành Tích',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 0.95,
+            children: all.map((a) {
+              final unlocked = a['unlocked'] as bool;
+              final color = a['color'] as Color;
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: unlocked
+                      ? color.withOpacity(0.08)
+                      : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: unlocked
+                        ? color.withOpacity(0.4)
+                        : Colors.grey.shade200,
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      a['icon'] as IconData,
+                      color: unlocked ? color : textGrey.withOpacity(0.4),
+                      size: 26,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      a['title'] as String,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: unlocked ? color : textGrey.withOpacity(0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      a['desc'] as String,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: unlocked ? textGrey : textGrey.withOpacity(0.35),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -239,6 +1160,67 @@ class _SpeakingPageState extends State<SpeakingPage>
             return Column(
               children: aiSessions
                   .map((s) => _aiPartnerSessionCard(s))
+                  .toList(),
+            );
+          },
+        ),
+
+        const SizedBox(height: 24),
+
+        // ── IELTS Tests Section ──
+        const Row(
+          children: [
+            Icon(Icons.headset_mic, color: Color(0xFF7B1FA2), size: 20),
+            SizedBox(width: 8),
+            Text(
+              'IELTS Tests',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF7B1FA2),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<IeltsSpeakingSession>>(
+          stream: _ieltsStore.watchSessions(limit: 30),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final ieltsSessionsList = snapshot.data ?? [];
+            if (ieltsSessionsList.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.headset_mic,
+                        size: 40,
+                        color: textGrey.withOpacity(0.4),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'No IELTS tests yet',
+                        style: TextStyle(color: textGrey),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return Column(
+              children: ieltsSessionsList
+                  .map((s) => _ieltsSessionCard(s))
                   .toList(),
             );
           },
@@ -406,12 +1388,116 @@ class _SpeakingPageState extends State<SpeakingPage>
     );
   }
 
+  Widget _ieltsSessionCard(IeltsSpeakingSession session) {
+    const purple = Color(0xFF7B1FA2);
+    final Color bandColor = session.overallBand >= 7.0
+        ? Colors.green
+        : session.overallBand >= 5.5
+        ? Colors.orange
+        : session.overallBand > 0
+        ? Colors.red
+        : textGrey;
+    final dur = session.duration;
+    final mins = dur.inMinutes;
+    final secs = dur.inSeconds % 60;
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => IeltsSpeakingResultPage(session: session),
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: purple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.headset_mic, color: purple, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          session.cueCard.topic,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: bandColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          session.overallBand > 0
+                              ? 'Band ${session.overallBand.toStringAsFixed(1)}'
+                              : '—',
+                          style: TextStyle(
+                            color: bandColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'P1: ${session.part1Band.toStringAsFixed(1)}  '
+                    'P2: ${session.part2Band > 0 ? session.part2Band.toStringAsFixed(1) : "—"}  '
+                    'P3: ${session.part3Band.toStringAsFixed(1)}  '
+                    '· ${mins}m${secs.toString().padLeft(2, '0')}s',
+                    style: const TextStyle(fontSize: 11, color: textGrey),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: textGrey, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _overallSpeakingCard() {
     return StreamBuilder(
       stream: _sessionStore.watchStats(),
       builder: (context, snapshot) {
         final stats = snapshot.data;
-        final bandScore = stats?.averageBandScore.toStringAsFixed(1) ?? "0.0";
+        final raw = stats?.averageBandScore ?? 0.0;
+        final rounded = ((raw * 2).round() / 2);
+        final bandScore = raw > 0 ? rounded.toStringAsFixed(1) : '0.0';
 
         return Container(
           padding: const EdgeInsets.all(22),
@@ -494,374 +1580,6 @@ class _SpeakingPageState extends State<SpeakingPage>
             ),
           ),
           const Icon(Icons.arrow_forward_ios, size: 16, color: textGrey),
-        ],
-      ),
-    );
-  }
-
-  Widget _statsOverviewCard(stats) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Statistics Overview",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: primaryBlue,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _statItem(
-                "Total",
-                "${stats?.totalSessions ?? 0}",
-                Icons.headset_mic,
-              ),
-              _statItem(
-                "Avg Band",
-                stats?.averageBandScore.toStringAsFixed(1) ?? "0.0",
-                Icons.grade,
-              ),
-              _statItem(
-                "Errors",
-                "${stats?.commonErrors.values.fold<int>(0, (sum, count) => sum + count) ?? 0}",
-                Icons.warning_amber,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statItem(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: primaryBlue, size: 32),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: primaryBlue,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: textGrey, fontSize: 13)),
-      ],
-    );
-  }
-
-  Widget _bandScoreChartCard(List<SpeakingSession> sessions) {
-    if (sessions.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Center(child: Text("No data to display yet")),
-      );
-    }
-
-    final recentSessions = sessions.take(10).toList().reversed.toList();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Band Score Progress",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: primaryBlue,
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 200,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          value.toInt().toString(),
-                          style: const TextStyle(fontSize: 12),
-                        );
-                      },
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        final index = value.toInt();
-                        if (index >= 0 && index < recentSessions.length) {
-                          return Text(
-                            (index + 1).toString(),
-                            style: const TextStyle(fontSize: 12),
-                          );
-                        }
-                        return const Text('');
-                      },
-                    ),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                minY: 0,
-                maxY: 9,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: recentSessions
-                        .asMap()
-                        .entries
-                        .map((e) => FlSpot(e.key.toDouble(), e.value.bandScore))
-                        .toList(),
-                    isCurved: true,
-                    color: primaryBlue,
-                    barWidth: 3,
-                    dotData: FlDotData(show: true),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: primaryBlue.withOpacity(0.1),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _errorBreakdownCard(stats) {
-    if (stats == null || stats.commonErrors.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final sortedErrors = stats.commonErrors.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Most Common Errors",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: primaryBlue,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...sortedErrors.take(5).map((entry) {
-            final total = stats.commonErrors.values.fold<int>(
-              0,
-              (sum, count) => sum + count,
-            );
-            final percentage = (entry.value / total * 100).round();
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        entry.key,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        "${entry.value} ($percentage%)",
-                        style: const TextStyle(color: textGrey),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  LinearProgressIndicator(
-                    value: entry.value / total,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(primaryBlue),
-                  ),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.lightbulb, color: primaryBlue, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "Focus on practicing ${sortedErrors.first.key} errors",
-                    style: const TextStyle(
-                      color: primaryBlue,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _achievementsCard(stats) {
-    final achievements = <Map<String, dynamic>>[];
-
-    if (stats != null && stats.totalSessions >= 1) {
-      achievements.add({
-        'title': 'First Session',
-        'icon': Icons.celebration,
-        'unlocked': true,
-      });
-    }
-
-    if (stats != null && stats.totalSessions >= 10) {
-      achievements.add({
-        'title': '10 Sessions',
-        'icon': Icons.local_fire_department,
-        'unlocked': true,
-      });
-    }
-
-    if (stats != null && stats.averageBandScore >= 6.0) {
-      achievements.add({
-        'title': 'Band 6.0',
-        'icon': Icons.stars,
-        'unlocked': true,
-      });
-    }
-
-    if (stats != null && stats.averageBandScore >= 7.0) {
-      achievements.add({
-        'title': 'Band 7.0',
-        'icon': Icons.emoji_events,
-        'unlocked': true,
-      });
-    }
-
-    // Add locked achievements
-    if (stats == null || stats.totalSessions < 10) {
-      achievements.add({
-        'title': '10 Sessions',
-        'icon': Icons.lock,
-        'unlocked': false,
-      });
-    }
-
-    if (stats == null || stats.averageBandScore < 7.0) {
-      achievements.add({
-        'title': 'Band 7.0',
-        'icon': Icons.lock,
-        'unlocked': false,
-      });
-    }
-
-    if (achievements.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Achievements",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: primaryBlue,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: achievements.map((achievement) {
-              final unlocked = achievement['unlocked'] as bool;
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: unlocked ? Colors.amber.shade50 : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: unlocked ? Colors.amber : Colors.grey.shade300,
-                    width: 2,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      achievement['icon'] as IconData,
-                      color: unlocked ? Colors.amber.shade700 : textGrey,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      achievement['title'] as String,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: unlocked ? Colors.amber.shade900 : textGrey,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
         ],
       ),
     );

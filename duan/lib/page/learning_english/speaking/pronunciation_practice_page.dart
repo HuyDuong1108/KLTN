@@ -61,6 +61,12 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
   }
 
   Future<void> _generateNewSentence() async {
+    // Prevent firing a second request while one is already in-flight.
+    // Without this guard, selecting a category while the page is still
+    // loading its first sentence fires 2 concurrent Gemini requests,
+    // which can immediately trigger a 429 even on paid Tier 1.
+    if (_isGenerating) return;
+
     setState(() {
       _isGenerating = true;
       _currentSession = null;
@@ -156,6 +162,8 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
 
   Future<void> _analyzeTranscript() async {
     if (_transcript.isEmpty || _targetSentence.isEmpty) return;
+    // Prevent double-fire (e.g. tapping Retry while a call is already running)
+    if (_isAnalyzing) return;
 
     setState(() => _isAnalyzing = true);
 
@@ -168,6 +176,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
         targetSentence: _targetSentence,
         userTranscript: _transcript,
         confidenceScores: _confidenceScores,
+        category: _selectedCategory,
       );
 
       final session = SpeakingSession(
@@ -210,10 +219,19 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Analysis failed: $e'),
+            content: Text(
+              e.toString().contains('429')
+                  ? 'Đang bận, vui lòng thử lại sau 5 giây...'
+                  : 'Analysis failed: $e',
+            ),
             action: SnackBarAction(
               label: 'Retry',
-              onPressed: _analyzeTranscript,
+              onPressed: () async {
+                // Wait 2 s so the previous server-side request can finish
+                // before we fire a new one — avoids back-to-back 429s.
+                await Future.delayed(const Duration(seconds: 2));
+                if (mounted) _analyzeTranscript();
+              },
             ),
           ),
         );
@@ -311,7 +329,9 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       stream: _sessionStore.watchStats(),
       builder: (context, snapshot) {
         final stats = snapshot.data;
-        final bandScore = stats?.averageBandScore.toStringAsFixed(1) ?? "0.0";
+        final raw = stats?.averageBandScore ?? 0.0;
+        final rounded = ((raw * 2).round() / 2);
+        final bandScore = raw > 0 ? rounded.toStringAsFixed(1) : '0.0';
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -531,7 +551,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  "Score: ${_currentSession!.overallScore}/100 • Band ${_currentSession!.bandScore.toStringAsFixed(1)}",
+                  "Score: ${_currentSession!.overallScore}/100 • Band ${((_currentSession!.bandScore * 2).round() / 2).toStringAsFixed(1)}",
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
