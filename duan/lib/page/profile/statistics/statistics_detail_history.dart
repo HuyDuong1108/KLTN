@@ -308,7 +308,7 @@ extension _StatisticsDetailHistory on _StatisticsDetailPageState {
   void _openAllSessionsSheet(List<_ReviewSession> sessions) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Color(0xFFF3F9FF),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

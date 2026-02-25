@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'listening_result_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:just_audio/just_audio.dart';
 
 class ListeningTestPage extends StatefulWidget {
   final String testId;
@@ -17,6 +18,10 @@ class ListeningTestPage extends StatefulWidget {
 class _ListeningTestPageState extends State<ListeningTestPage> {
   static const Color primaryBlue = Color(0xFF1976D2);
   static const Color bgColor = Color(0xFFF6FAFF);
+
+  final AudioPlayer _audioPlayerController = AudioPlayer();
+  Duration _audioDuration = Duration.zero;
+  Duration _currentPosition = Duration.zero;
 
   final Map<int, TextEditingController> _inputControllers = {};
   final Map<int, String> _mcqAnswers = {};
@@ -71,6 +76,21 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
     if (!doc.exists) return;
 
     _testData = doc.data()!;
+
+    final String audioUrl = _testData!['audioUrl'];
+
+  await _audioPlayerController.setUrl(audioUrl);
+
+  // Lấy duration
+  _audioDuration = _audioPlayerController.duration ?? Duration.zero;
+
+  // Lắng nghe position
+  _audioPlayerController.positionStream.listen((position) {
+    setState(() {
+      _currentPosition = position;
+    });
+  });
+
     final int duration =
         (_testData!['duration'] is int && _testData!['duration'] > 0)
         ? _testData!['duration']
@@ -99,6 +119,8 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
     });
   }
 
+  
+
   String _formatTime(int seconds) {
     if (seconds <= 0) return "00:00";
     final int m = seconds ~/ 60;
@@ -109,6 +131,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
   // ================= DISPOSE =================
   @override
   void dispose() {
+    _audioPlayerController.dispose();
     _timer?.cancel();
     for (final c in _inputControllers.values) {
       c.dispose();
@@ -294,41 +317,53 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
 
   // ================= AUDIO PLAYER =================
   Widget _audioPlayer() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            "You will hear the recording ONCE only",
-            style: TextStyle(
-              fontSize: 13,
-              fontStyle: FontStyle.italic,
-              color: Colors.grey,
+  return Container(
+    padding: const EdgeInsets.all(16),
+    color: Colors.white,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "You will hear the recording ONCE only",
+          style: TextStyle(
+            fontSize: 13,
+            fontStyle: FontStyle.italic,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.play_circle_fill,
+                  size: 40, color: primaryBlue),
+              onPressed: () async {
+                await _audioPlayerController.play();
+              },
             ),
-          ),
-          SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(Icons.play_circle_fill, size: 40, color: primaryBlue),
-              SizedBox(width: 12),
-              Expanded(
-                child: LinearProgressIndicator(
-                  value: 0.0,
-                  minHeight: 6,
-                  backgroundColor: Color(0xFFE3F2FD),
-                  valueColor: AlwaysStoppedAnimation(primaryBlue),
-                ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: LinearProgressIndicator(
+                value: _audioDuration.inSeconds == 0
+                    ? 0
+                    : _currentPosition.inSeconds /
+                        _audioDuration.inSeconds,
+                minHeight: 6,
+                backgroundColor: const Color(0xFFE3F2FD),
+                valueColor:
+                    const AlwaysStoppedAnimation(primaryBlue),
               ),
-              SizedBox(width: 12),
-              Text("AUDIO"),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+            ),
+            const SizedBox(width: 12),
+            Text(
+              "${_currentPosition.inMinutes}:${(_currentPosition.inSeconds % 60).toString().padLeft(2, '0')}",
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   // ================= SECTION HEADER =================
   Widget _sectionHeader({required String title, required String description}) {

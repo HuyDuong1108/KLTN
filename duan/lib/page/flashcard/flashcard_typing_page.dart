@@ -21,7 +21,6 @@ class FlashcardTypingPage extends StatefulWidget {
   State<FlashcardTypingPage> createState() => _FlashcardTypingPageState();
 }
 
-
 class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
   int currentIndex = 0;
   int score = 0;
@@ -30,7 +29,6 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
   bool isCorrect = false;
   String feedback = "";
   final List<String> _needPractice = [];
-
 
   final TextEditingController _controller = TextEditingController();
 
@@ -78,10 +76,8 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
           _needPractice.add(line);
         }
         feedback = "Sai rồi!\nĐáp án đúng: ${v.word}";
-
       }
     });
-
 
     Future.delayed(const Duration(milliseconds: 1600), () async {
       if (currentIndex < widget.vocabList.length - 1) {
@@ -133,7 +129,6 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
             ),
           ),
         );
-
       }
     });
   }
@@ -143,7 +138,7 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
     final vocab = widget.vocabList[currentIndex];
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(
         backgroundColor: Colors.blue,
         title: const Text("Typing Flashcard"),
@@ -220,7 +215,7 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
                         color: Colors.blue.shade100.withOpacity(0.6),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
-                      )
+                      ),
                     ],
                   ),
                   child: TextField(
@@ -229,7 +224,7 @@ class _FlashcardTypingPageState extends State<FlashcardTypingPage> {
                     textInputAction: TextInputAction.done,
                     style: const TextStyle(fontSize: 18),
                     decoration: InputDecoration(
-                      hintText: "Nhập từ tiếng Nhật...",
+                      hintText: "Nhập từ tiếng Anh...",
                       contentPadding: const EdgeInsets.symmetric(
                         vertical: 14,
                         horizontal: 16,

@@ -11,11 +11,12 @@ import '../models/stats_summary.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/continue_learning_card.dart';
-import 'learning/japan/lesson_detail_page.dart';
 import 'homeaction/speaking_example.dart';
 import 'learning_english/reading/reading_review_page.dart';
 import 'learning_english/writing/writing_review_page.dart';
 import 'learning_english/listening/listening_review_page.dart';
+import 'flashcard/flashcard_study_page.dart';
+import '../models/vocabulary.dart';
 
 // Trang Home chính
 class HomePageContent extends StatefulWidget {
@@ -55,33 +56,6 @@ class _HomePageContentState extends State<HomePageContent> {
     }
 
     return "there";
-  }
-
-  Future<void> _openContinueLesson(
-    BuildContext context,
-    String lessonPath,
-  ) async {
-    try {
-      final snap = await FirebaseFirestore.instance.doc(lessonPath).get();
-      if (!snap.exists) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Không tìm thấy bài học để tiếp tục.")),
-        );
-        return;
-      }
-
-      if (!context.mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => LessonDetailPage(lessonDoc: snap)),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Lỗi mở bài học: $e")));
-    }
   }
 
   @override
@@ -368,38 +342,192 @@ class _HomePageContentState extends State<HomePageContent> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: const [
-                  Expanded(
-                    child: _pathCard(
-                      "Business English",
-                      "20/60",
-                      "lib/image/logo.png",
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: _pathCard(
-                      "Travel Essentials",
-                      "7/10",
-                      "lib/image/logo.png",
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: _pathCard(
-                      "Academic Writing",
-                      "10/20",
-                      "lib/image/logo.png",
-                    ),
-                  ),
-                ],
+              FutureBuilder(
+                future: _getRecentFlashcards(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const SizedBox();
+                  }
+
+                  final sets = snapshot.data as List<Map<String, dynamic>>;
+
+                  return Row(
+                    children: sets.map((set) {
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: _pathCardDynamic(set),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _pathCardDynamic(Map<String, dynamic> set) {
+    final progress = "${set['easy']}/${set['total']}";
+
+    return GestureDetector(
+      onTap: () async {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) return;
+
+        final setId = set['setId'];
+        final isPersonal = set['isPersonal'];
+
+        DocumentSnapshot setDoc;
+
+        if (isPersonal) {
+          setDoc = await FirebaseFirestore.instance
+              .collection('flashcards')
+              .doc(user.uid)
+              .collection('userFlashcards')
+              .doc(setId)
+              .get();
+        } else {
+          setDoc = await FirebaseFirestore.instance
+              .collection('flashcard_sets')
+              .doc(setId)
+              .get();
+        }
+
+        final rawList =
+            (setDoc.data() as Map<String, dynamic>)['vocabList'] ?? [];
+
+        final vocabList = rawList.map<Vocabulary>((e) {
+          final data = Map<String, dynamic>.from(e);
+          return Vocabulary(
+            word: data['word'],
+            romaji: data['romaji'],
+            meaning: data['meaning'],
+          );
+        }).toList();
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FlashcardStudyPage(
+              vocabList: vocabList,
+              setId: setId,
+              isPersonal: isPersonal,
+              setTitle: set['title'],
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            SizedBox(height: 60, child: Image.asset("lib/image/logo.png")),
+            const SizedBox(height: 8),
+            Text(
+              set['title'],
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "$progress easy",
+              style: const TextStyle(color: Color(0xFF607D8B), fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _getRecentFlashcards() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return [];
+
+    List<Map<String, dynamic>> result = [];
+
+    // 1️⃣ Lấy bộ cá nhân
+    final personalSets = await FirebaseFirestore.instance
+        .collection('flashcards')
+        .doc(user.uid)
+        .collection('userFlashcards')
+        .get();
+
+    for (var setDoc in personalSets.docs) {
+      final setId = setDoc.id;
+
+      final sessionSnap = await setDoc.reference
+          .collection('reviewSessions')
+          .orderBy('createdAtMs', descending: true)
+          .limit(1)
+          .get();
+
+      if (sessionSnap.docs.isEmpty) continue;
+
+      final data = sessionSnap.docs.first.data();
+
+      result.add({
+        "setId": setId,
+        "title": setDoc.data()['title'] ?? "Flashcard",
+        "easy": data['easy'] ?? 0,
+        "total": data['total'] ?? 0,
+        "isPersonal": true,
+        "createdAtMs": data['createdAtMs'] ?? 0,
+      });
+    }
+
+    // 2️⃣ Lấy bộ cộng đồng
+    final communitySets = await FirebaseFirestore.instance
+        .collection('flashcard_sets')
+        .get();
+
+    for (var setDoc in communitySets.docs) {
+      final setId = setDoc.id;
+
+      final sessionSnap = await FirebaseFirestore.instance
+          .collection('flashcard_sets')
+          .doc(setId)
+          .collection('userProgress')
+          .doc(user.uid)
+          .collection('reviewSessions')
+          .orderBy('createdAtMs', descending: true)
+          .limit(1)
+          .get();
+
+      if (sessionSnap.docs.isEmpty) continue;
+
+      final data = sessionSnap.docs.first.data();
+
+      result.add({
+        "setId": setId,
+        "title": setDoc.data()['title'] ?? "Flashcard",
+        "easy": data['easy'] ?? 0,
+        "total": data['total'] ?? 0,
+        "isPersonal": false,
+        "createdAtMs": data['createdAtMs'] ?? 0,
+      });
+    }
+
+    // 3️⃣ Sắp xếp theo thời gian gần nhất
+    result.sort(
+      (a, b) => (b['createdAtMs'] as int).compareTo(a['createdAtMs'] as int),
+    );
+
+    return result.take(3).toList();
   }
 }
 
@@ -532,47 +660,6 @@ class _goalChip extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _pathCard extends StatelessWidget {
-  final String title;
-  final String progress;
-  final String image;
-
-  const _pathCard(this.title, this.progress, this.image, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          SizedBox(height: 60, child: Image.asset(image, fit: BoxFit.contain)),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "$progress complete",
-            style: const TextStyle(color: Color(0xFF607D8B), fontSize: 12),
-          ),
-        ],
       ),
     );
   }

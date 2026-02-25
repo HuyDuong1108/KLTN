@@ -41,11 +41,11 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
   late List<Map<String, String>> messages;
 
   final List<String> suggestions = [
-    "Explain the difference between pinyin and Chinese characters",
-    "How do tones work in Chinese?",
-    "What is the difference between hiragana and katakana?",
-    "How do Japanese particles work?",
-    "How does Hangul writing system work?",
+    "How can I improve my IELTS Speaking fluency?",
+    "What are the best strategies for IELTS Reading?",
+    "How do I write a high-scoring IELTS Writing Task 2 essay?",
+    "Tips to improve listening skills for IELTS?",
+    "How can I expand my vocabulary for IELTS band 7+?",
   ];
 
   @override
@@ -448,14 +448,11 @@ class _ChatGeminiPageState extends State<ChatGeminiPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-  color: Colors.white,
-  boxShadow: [
-    BoxShadow(
-      color: primaryBlue.withOpacity(0.15),
-      blurRadius: 10,
-    ),
-  ],
-),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: primaryBlue.withOpacity(0.15), blurRadius: 10),
+        ],
+      ),
 
       child: Row(
         children: [
