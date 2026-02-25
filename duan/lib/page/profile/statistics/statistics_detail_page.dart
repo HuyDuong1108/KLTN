@@ -1088,7 +1088,7 @@ Future<void> _startDueReviewSession({
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Color(0xFFF3F9FF),
       appBar: AppBar(
         backgroundColor: Colors.blue,
         foregroundColor: Colors.black,

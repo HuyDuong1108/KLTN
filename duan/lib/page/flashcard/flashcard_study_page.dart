@@ -526,7 +526,7 @@ await _updateFlashcardDailyGoal();
     final v = widget.vocabList[currentIndex];
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(
         title: Text(
           'Flashcards - ${widget.setTitle}',
