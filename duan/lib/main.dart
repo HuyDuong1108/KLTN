@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'data/backend_launcher.dart';
+import 'admin/admin_dashboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +34,7 @@ class MyApp extends StatelessWidget {
         textTheme: GoogleFonts.notoSansJpTextTheme(),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const SplashScreen(), // mở đầu bằng Splash
+      home: const AdminDashboard(), // mở đầu bằng Splash
     );
   }
 }
