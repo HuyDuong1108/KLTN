@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../layout/layout_main.dart';
+import '../../admin/admin_dashboard.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,22 +19,49 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> login() async {
     setState(() => isLoading = true);
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      // Nếu đăng nhập thành công → chuyển sang HomePage
+      final uid = cred.user!.uid;
+      final doc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(uid)
+          .get();
+
+      final data = doc.exists ? doc.data() : null;
+      final isBanned = data?["banned"] == true;
+      final isAdmin = data?["role"] == "admin";
+
+      if (!mounted) return;
+
+      if (isBanned) {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+              "Your account has been banned. Please contact support.",
+            ),
+          ),
+        );
+        return;
+      }
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MainPage()),
+        MaterialPageRoute(
+          builder: (_) => isAdmin ? const AdminDashboard() : const MainPage(),
+        ),
       );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message ?? "Login failed")));
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 

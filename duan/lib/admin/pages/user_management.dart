@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/admin_table.dart';
+import 'user_detail_admin.dart';
 
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
@@ -14,6 +15,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
   String searchText = "";
   int currentPage = 0;
   final int pageSize = 10;
+
+  // Stable stream references — created once to avoid resubscribing on every setState()
+  late final Stream<QuerySnapshot> _usersStream =
+      FirebaseFirestore.instance.collection("users").snapshots();
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +41,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
           /// STATISTICS
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection("users").snapshots(),
+            stream: _usersStream,
             builder:(context,snapshot){
 
               int total=0;
@@ -120,18 +125,38 @@ class _UserManagementPageState extends State<UserManagementPage> {
           Expanded(
             child:StreamBuilder<QuerySnapshot>(
 
-              stream:FirebaseFirestore.instance
-                  .collection("users")
-                  .orderBy("createdAt",descending:true)
-                  .snapshots(),
+              stream: _usersStream,
 
               builder:(context,snapshot){
+
+                if(snapshot.hasError){
+                  return _errorState(snapshot.error);
+                }
+
+                if(snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData){
+                  return const Center(child:CircularProgressIndicator());
+                }
 
                 if(!snapshot.hasData){
                   return const Center(child:CircularProgressIndicator());
                 }
 
-                final filtered=snapshot.data!.docs.where((doc){
+                // Sort client-side so users without `createdAt` aren't filtered out
+                final allDocs = snapshot.data!.docs.toList()
+                  ..sort((a, b) {
+                    final am = a.data() as Map<String, dynamic>;
+                    final bm = b.data() as Map<String, dynamic>;
+                    final at = am["createdAt"];
+                    final bt = bm["createdAt"];
+                    if (at is Timestamp && bt is Timestamp) {
+                      return bt.compareTo(at);
+                    }
+                    if (at is Timestamp) return -1;
+                    if (bt is Timestamp) return 1;
+                    return 0;
+                  });
+
+                final filtered=allDocs.where((doc){
 
                   final data=doc.data() as Map<String,dynamic>;
                   final name=(data["name"]??"").toString().toLowerCase();
@@ -160,9 +185,9 @@ class _UserManagementPageState extends State<UserManagementPage> {
                         headers:const[
                           "No",
                           "Name",
+                          "Role",
                           "Gender",
-                          "Birthdate",
-                          "Created",
+                          "Joined",
                           "Action"
                         ],
 
@@ -179,21 +204,73 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           }
 
                           int stt=start+index+1;
+                          final banned = data["banned"] == true;
+                          final role = (data["role"] ?? "user").toString();
 
                           return [
 
                             Text("$stt"),
 
-                            Text(data["name"]??""),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    data["name"] ?? "",
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: banned ? Colors.grey : null,
+                                      decoration: banned
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                                if (banned)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 6),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade600,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        "BANNED",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            roleBadge(role),
 
                             Text(data["gender"]??""),
-
-                            Text(data["birthdate"]??""),
 
                             Text(created),
 
                             Row(
                               children:[
+
+                                IconButton(
+                                  icon:const Icon(Icons.visibility,color:Colors.teal),
+                                  tooltip:"View detail",
+                                  onPressed:(){
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:(_)=>UserDetailAdminPage(uid:doc.id),
+                                      ),
+                                    );
+                                  },
+                                ),
 
                                 IconButton(
                                   icon:const Icon(Icons.edit,color:Colors.blue),
@@ -625,6 +702,84 @@ void confirmDelete(String uid) {
     },
   );
 }
+  /// ERROR STATE
+  Widget _errorState(Object? error) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline,
+                size: 52, color: Colors.red.shade400),
+            const SizedBox(height: 10),
+            const Text(
+              "Could not load users",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.redAccent,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "$error",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "Check Firestore Security Rules — admin needs read access on users collection.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// ROLE BADGE
+  Widget roleBadge(String role) {
+    Color color;
+    switch (role) {
+      case "admin":
+        color = Colors.deepPurple;
+        break;
+      case "premium":
+        color = Colors.amber.shade800;
+        break;
+      case "banned":
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.blueGrey;
+    }
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.14),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          role.toUpperCase(),
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
   /// STAT CARD
   Widget statCard(String title,int value,Color color){
 
