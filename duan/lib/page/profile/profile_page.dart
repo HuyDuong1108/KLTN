@@ -21,17 +21,17 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _statsFuture = StatsApi.instance.fetchSummary();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(seconds: 1), () {
-        _showUnlockDialog(
-          emoji: "🔥",
-          title: "7-Day Streak",
-          message:
-              "You maintained a 7-day learning streak!\nKeep going to build stronger habits.",
-          color: Colors.orange,
-        );
-      });
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   Future.delayed(const Duration(seconds: 1), () {
+    //     _showUnlockDialog(
+    //       emoji: "🔥",
+    //       title: "7-Day Streak",
+    //       message:
+    //           "You maintained a 7-day learning streak!\nKeep going to build stronger habits.",
+    //       color: Colors.orange,
+    //     );
+    //   });
+    // });
   }
 
   Future<void> _refresh() async {

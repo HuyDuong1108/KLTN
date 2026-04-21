@@ -34,7 +34,8 @@ class MyApp extends StatelessWidget {
         textTheme: GoogleFonts.notoSansJpTextTheme(),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const AdminDashboard(), // mở đầu bằng Splash
+      home: const SplashScreen(),
+      // home: const AdminDashboard(), // mở đầu bằng Splash
     );
   }
 }

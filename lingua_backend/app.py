@@ -355,7 +355,7 @@ def ai_chat(req: AiChatRequest) -> AiChatResponse:
         return _ai_chat_mock(req.question)
 
     prompt = (
-        "Bạn là trợ lý giải thích ngữ pháp và từ vựng tiếng Trung "
+        "Bạn là trợ lý giải thích ngữ pháp và từ vựng tiếng Anh "
         "cho người học tiếng Việt. Trả lời ngắn gọn, rõ ràng, "
         "kèm phiên âm pinyin nếu cần.\n\n"
         f"Câu hỏi của người dùng: {req.question}"
@@ -432,7 +432,7 @@ def ai_flashcard_suggest(
         return _ai_suggest_mock(term, req.language)
 
     sys_prompt = (
-        "Bạn là trợ lý tạo flashcard tiếng Trung cho người học tiếng Việt. "
+        "Bạn là trợ lý tạo flashcard tiếng Anh cho người học tiếng Việt. "
         "Cho một từ (term), hãy trả về JSON với các trường:\n"
         "term, reading (pinyin), pos, translations (tiếng Việt, 1-3 mục), "
         "example {sentence, reading, translation}, "
