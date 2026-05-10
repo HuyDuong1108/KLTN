@@ -9,6 +9,7 @@ import 'pages/test_management.dart';
 import 'pages/statistics_page.dart';
 import 'pages/admin_profile_page.dart';
 import '../page/auth/login.dart';
+import '../companion/companion_service.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -35,7 +36,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   void initState() {
     super.initState();
+    CompanionService.instance.setSuppressed(true);
     _verifyAdmin();
+  }
+
+  @override
+  void dispose() {
+    CompanionService.instance.setSuppressed(false);
+    super.dispose();
   }
 
   Future<void> _verifyAdmin() async {
@@ -100,6 +108,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _logout() async {
+    CompanionService.instance.onLogout();
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(

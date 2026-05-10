@@ -4,6 +4,9 @@ import 'reading_result_page.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import '../../../companion/companion_context.dart';
+import '../../../companion/companion_service.dart';
+import '../../../companion/companion_events.dart';
 
 class ReadingTestPage extends StatefulWidget {
   final String testId;
@@ -239,6 +242,21 @@ class _ReadingTestPageState extends State<ReadingTestPage> {
             "reviewPath": docRef.path,
           });
     }
+
+    CompanionContextService.instance.setRecentActivity(
+      "Vừa hoàn thành bài Reading (band ${result['band']}, đúng ${result['correct']}/${(result['correct'] as num) + (result['incorrect'] as num)})",
+    );
+
+    CompanionService.instance.fireEvent(
+      CompanionEventType.testCompleted,
+      payload: {
+        "skill": "Reading",
+        "band": result['band'],
+        "correct": result['correct'],
+        "incorrect": result['incorrect'],
+      },
+      force: true,
+    );
 
     if (!mounted) return;
 

@@ -7,6 +7,9 @@ import '../../data/lingua_api_service.dart';
 import 'study_result_pages.dart';
 import '../../data/set_review_history_store.dart';
 import 'package:intl/intl.dart';
+import '../../companion/companion_context.dart';
+import '../../companion/companion_service.dart';
+import '../../companion/companion_events.dart';
 
 
 class FlashcardStudyPage extends StatefulWidget {
@@ -428,6 +431,28 @@ Future<void> _updateFlashcardDailyGoal() async {
     } catch (_) {}
 
 await _updateFlashcardDailyGoal();
+
+    // Companion: ghi nhận activity + bắn event cho Mira/Luka/Aki react
+    CompanionContextService.instance.setRecentActivity(
+      "Vừa ôn xong $total thẻ ở bộ \"${widget.setTitle}\" "
+      "(dễ: $_easy, tốt: $_good, khó: $_hard, again: $_again)",
+    );
+
+    CompanionService.instance.fireEvent(
+      CompanionEventType.flashcardReviewed,
+      payload: {
+        "set_title": widget.setTitle,
+        "count": total,
+        "again": _again,
+        "hard": _hard,
+        "good": _good,
+        "easy": _easy,
+        "success_rate": total == 0
+            ? 0
+            : ((_good + _easy) / total * 100).round(),
+      },
+      force: true,
+    );
 
     Navigator.pushReplacement(
       context,

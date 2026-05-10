@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'data/backend_launcher.dart';
 import 'admin/admin_dashboard.dart';
+import 'companion/widgets/floating_companion.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,9 @@ class MyApp extends StatelessWidget {
         textTheme: GoogleFonts.notoSansJpTextTheme(),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      builder: (context, child) {
+        return FloatingCompanion(child: child ?? const SizedBox.shrink());
+      },
       home: const SplashScreen(),
       // home: const AdminDashboard(), // mở đầu bằng Splash
     );

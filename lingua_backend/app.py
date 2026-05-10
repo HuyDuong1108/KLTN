@@ -56,6 +56,10 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException, Header, Depends, Query
+from dotenv import load_dotenv
+
+# Load .env next to this file (GEMINI_API_KEY, GEMINI_MODEL...)
+load_dotenv(Path(__file__).parent / ".env")
 
 import google.generativeai as genai
 
@@ -2203,3 +2207,343 @@ def ai_coach_chat(
         return CoachChatResponse(answer=_coach_chat_rule_based(req.question, ins))
 
 
+# ============================================================
+# COMPANION — AI buddy đồng hành theo user xuyên suốt app
+# ============================================================
+
+class CompanionMessage(BaseModel):
+    role: str  # "user" | "model"
+    content: str
+
+
+class CompanionContext(BaseModel):
+    """Thông tin về user inject vào prompt để AI phản hồi cá nhân hoá."""
+    name: Optional[str] = None
+    level: Optional[str] = None
+    latest_band: Optional[float] = None
+    latest_skill: Optional[str] = None
+    weak_skill: Optional[str] = None
+    streak_days: Optional[int] = None
+    flashcard_sets_count: Optional[int] = None
+    current_page: Optional[str] = None
+    recent_activity: Optional[str] = None
+
+
+class CompanionChatRequest(BaseModel):
+    uid: str
+    message: str
+    character_id: str = "mira"
+    character_prompt: Optional[str] = None  # system prompt theo nhân vật
+    history: List[CompanionMessage] = Field(default_factory=list)
+    context: Optional[CompanionContext] = None
+    memory_summary: Optional[str] = None  # tóm tắt phần memory cũ
+
+
+class CompanionChatResponse(BaseModel):
+    reply: str
+    suggestions: List[str] = Field(default_factory=list)
+
+
+DEFAULT_COMPANION_PROMPT = (
+    "Bạn là Mira — trợ lý học tiếng Anh thân thiện, đồng hành với học viên. "
+    "Phong cách: ấm áp, ngắn gọn, khuyến khích, dùng emoji vừa phải. "
+    "Luôn trả lời bằng tiếng Việt trừ khi học viên hỏi bằng tiếng Anh. "
+    "Khi học viên hỏi về từ/ngữ pháp tiếng Anh, giải thích kèm 1-2 ví dụ. "
+    "Khi học viên chia sẻ cảm xúc hay gặp khó khăn, đồng cảm và gợi ý bước tiếp theo nhỏ gọn."
+)
+
+
+def _build_companion_context_block(ctx: Optional[CompanionContext]) -> str:
+    if ctx is None:
+        return ""
+    lines: List[str] = []
+    if ctx.name:
+        lines.append(f"- Tên: {ctx.name}")
+    if ctx.level:
+        lines.append(f"- Trình độ: {ctx.level}")
+    if ctx.latest_band is not None:
+        skill = ctx.latest_skill or "kỹ năng"
+        lines.append(f"- Band {skill} mới nhất: {ctx.latest_band}")
+    if ctx.weak_skill:
+        lines.append(f"- Kỹ năng yếu nhất: {ctx.weak_skill}")
+    if ctx.streak_days is not None:
+        lines.append(f"- Streak hiện tại: {ctx.streak_days} ngày")
+    if ctx.flashcard_sets_count is not None:
+        lines.append(f"- Số bộ flashcard: {ctx.flashcard_sets_count}")
+    if ctx.current_page:
+        lines.append(f"- Đang ở màn hình: {ctx.current_page}")
+    if ctx.recent_activity:
+        lines.append(f"- Hoạt động gần nhất: {ctx.recent_activity}")
+    if not lines:
+        return ""
+    return "Thông tin về học viên hiện tại:\n" + "\n".join(lines) + "\n\n"
+
+
+def _companion_fallback(message: str, character_id: str) -> CompanionChatResponse:
+    """Trả lời đơn giản khi không có Gemini key."""
+    hello = message.lower().strip()
+    if any(w in hello for w in ["hi", "hello", "chào", "xin chào"]):
+        return CompanionChatResponse(
+            reply="Chào bạn! Mình là Mira 👋 Hôm nay bạn muốn luyện kỹ năng gì nào?",
+            suggestions=["Luyện Listening", "Ôn flashcard", "Chữa ngữ pháp"],
+        )
+    return CompanionChatResponse(
+        reply=f"(mock) Mình đã nghe: \"{message}\" — bạn muốn mình giúp gì nhé?",
+        suggestions=["Giải thích thêm", "Ví dụ khác", "Luyện tập"],
+    )
+
+
+def _extract_suggestions(text: str) -> (str, List[str]):
+    """
+    Tách reply chính và gợi ý follow-up nếu AI có đưa ra.
+    Tìm marker "Gợi ý:" hoặc "Suggestions:" ở cuối.
+    """
+    markers = ["\nGợi ý:", "\nSUGGESTIONS:", "\nSuggestions:"]
+    for m in markers:
+        if m in text:
+            head, tail = text.rsplit(m, 1)
+            tail_lines = [
+                ln.strip().lstrip("-").lstrip("*").strip()
+                for ln in tail.strip().split("\n")
+                if ln.strip()
+            ]
+            return head.strip(), tail_lines[:3]
+    return text.strip(), []
+
+
+@app.post("/companion/chat", response_model=CompanionChatResponse)
+def companion_chat(req: CompanionChatRequest) -> CompanionChatResponse:
+    if not req.message or not req.message.strip():
+        raise HTTPException(status_code=400, detail="message is required")
+
+    if gemini_model is None:
+        return _companion_fallback(req.message, req.character_id)
+
+    # Build system prompt: character persona + user context + memory summary
+    persona = (req.character_prompt or DEFAULT_COMPANION_PROMPT).strip()
+    context_block = _build_companion_context_block(req.context)
+
+    memory_block = ""
+    if req.memory_summary and req.memory_summary.strip():
+        memory_block = (
+            "Ghi nhớ các cuộc trò chuyện trước:\n"
+            f"{req.memory_summary.strip()}\n\n"
+        )
+
+    rules = (
+        "Quy tắc trả lời:\n"
+        "- Ngắn gọn (2–5 câu) trừ khi học viên yêu cầu giải thích dài.\n"
+        "- Nếu phù hợp, cuối câu trả lời thêm dòng \"Gợi ý:\" + 2-3 gợi ý ngắn "
+        "(mỗi gợi ý tối đa 6 từ) để học viên dễ tap tiếp.\n"
+        "- Không lặp lại nguyên văn câu hỏi.\n"
+        "- Dùng Markdown nhẹ: **bold** cho từ khoá quan trọng.\n"
+    )
+
+    system_block = f"{persona}\n\n{context_block}{memory_block}{rules}"
+
+    try:
+        chat = gemini_model.start_chat(history=[])
+        # Nạp system prompt dưới dạng turn đầu tiên (Gemini không có role system)
+        chat.send_message(system_block)
+
+        # Nạp lịch sử cũ (nếu có)
+        for m in req.history[-20:]:  # giới hạn 20 tin gần nhất
+            role = m.role if m.role in ("user", "model") else "user"
+            if role == "user":
+                # Dùng tuple history format không khả dụng; gửi tuần tự
+                chat.history.append({
+                    "role": "user",
+                    "parts": [m.content],
+                })
+            else:
+                chat.history.append({
+                    "role": "model",
+                    "parts": [m.content],
+                })
+
+        result = chat.send_message(req.message)
+        text = (result.text or "").strip() if result else ""
+
+        if not text:
+            return _companion_fallback(req.message, req.character_id)
+
+        reply, suggestions = _extract_suggestions(text)
+        return CompanionChatResponse(reply=reply, suggestions=suggestions)
+    except Exception as e:  # noqa: BLE001
+        # Log lỗi cho dev, fallback cho user
+        print(f"[companion/chat] Gemini error: {e}")
+        return _companion_fallback(req.message, req.character_id)
+
+
+# ============================================================
+# COMPANION — Proactive reaction (sau khi user làm xong 1 action)
+# ============================================================
+
+class CompanionReactRequest(BaseModel):
+    uid: str
+    event_type: str  # "test_completed" | "flashcard_reviewed" | "streak_broken" | ...
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    character_id: str = "mira"
+    character_prompt: Optional[str] = None
+    context: Optional[CompanionContext] = None
+
+
+class CompanionReactResponse(BaseModel):
+    bubble: str  # tin nhắn ngắn hiện lên bubble (<=160 ký tự)
+    tone: str = "happy"  # "happy" | "neutral" | "sad" | "proud"
+
+
+def _rule_based_reaction(event_type: str, payload: Dict[str, Any]) -> CompanionReactResponse:
+    if event_type == "test_completed":
+        band = payload.get("band")
+        skill = payload.get("skill") or "test"
+        if isinstance(band, (int, float)):
+            if band >= 7:
+                return CompanionReactResponse(
+                    bubble=f"Xuất sắc! Band {band} ở {skill} 🎉 Bạn đang tiến bộ thật sự đó!",
+                    tone="proud",
+                )
+            if band >= 5.5:
+                return CompanionReactResponse(
+                    bubble=f"Band {band} ở {skill} — ổn áp! Giữ nhịp này nhé 💪",
+                    tone="happy",
+                )
+            return CompanionReactResponse(
+                bubble=f"Band {band} rồi — đừng nản, mình xem lại phần sai là tiến bộ thôi 🌱",
+                tone="neutral",
+            )
+    if event_type == "streak_broken":
+        return CompanionReactResponse(
+            bubble="Hôm qua bạn chưa học đó 🥲 Chỉ cần 5 phút hôm nay, mình bắt đầu lại nhé?",
+            tone="sad",
+        )
+    if event_type == "flashcard_reviewed":
+        n = payload.get("count", 0)
+        return CompanionReactResponse(
+            bubble=f"Hay quá, vừa ôn xong {n} thẻ! Một chút nữa là thuộc luôn đó 📚",
+            tone="happy",
+        )
+    if event_type == "login":
+        return CompanionReactResponse(
+            bubble="Chào mừng trở lại! Hôm nay mình học gì nào? ✨",
+            tone="happy",
+        )
+    return CompanionReactResponse(
+        bubble="Mình đang theo dõi — cứ tiếp tục nhé!",
+        tone="neutral",
+    )
+
+
+# ============================================================
+# COMPANION — Summarize (nén lịch sử cũ thành 1 đoạn memory)
+# ============================================================
+
+class CompanionSummarizeRequest(BaseModel):
+    uid: str
+    character_prompt: Optional[str] = None
+    previous_summary: Optional[str] = None
+    messages: List[CompanionMessage] = Field(default_factory=list)
+
+
+class CompanionSummarizeResponse(BaseModel):
+    summary: str
+
+
+@app.post("/companion/summarize", response_model=CompanionSummarizeResponse)
+def companion_summarize(
+    req: CompanionSummarizeRequest,
+) -> CompanionSummarizeResponse:
+    if not req.messages:
+        return CompanionSummarizeResponse(
+            summary=(req.previous_summary or "").strip(),
+        )
+
+    if gemini_model is None:
+        # Fallback: ghép short summary từ một vài tin user quan trọng
+        user_lines = [
+            m.content.strip()
+            for m in req.messages
+            if m.role == "user" and m.content.strip()
+        ][:5]
+        brief = " | ".join(user_lines)[:300]
+        prev = (req.previous_summary or "").strip()
+        combined = (prev + " " + brief).strip()
+        return CompanionSummarizeResponse(summary=combined[:600])
+
+    # Gộp lịch sử thành text
+    convo_lines: List[str] = []
+    for m in req.messages:
+        who = "Học viên" if m.role == "user" else "Trợ lý"
+        convo_lines.append(f"{who}: {m.content.strip()}")
+    convo_text = "\n".join(convo_lines)
+
+    prev = (req.previous_summary or "").strip()
+
+    prompt = (
+        "Bạn là trợ lý tổng hợp ghi chú. Tôi sẽ đưa bạn một đoạn hội thoại giữa "
+        "một học viên tiếng Anh và trợ lý. Hãy cập nhật phần \"Ghi nhớ về học viên\" "
+        "để các cuộc trò chuyện sau tham chiếu lại được.\n\n"
+        "Yêu cầu:\n"
+        "- Viết 2-4 câu, tiếng Việt.\n"
+        "- Tập trung vào: mục tiêu học, trình độ, điểm yếu, sở thích chủ đề, "
+        "thói quen học, sự kiện quan trọng user chia sẻ.\n"
+        "- KHÔNG chép lại câu hỏi cụ thể hay ngữ pháp đã hỏi. "
+        "Chỉ giữ thông tin có ích khi gặp lại user.\n"
+        "- Nếu đã có \"Ghi nhớ cũ\", giữ các thông tin còn đúng và bổ sung cái mới, "
+        "gộp tự nhiên, không lặp.\n\n"
+    )
+    if prev:
+        prompt += f"Ghi nhớ cũ:\n{prev}\n\n"
+    prompt += f"Đoạn hội thoại mới:\n{convo_text}\n\nGhi nhớ cập nhật:"
+
+    try:
+        result = gemini_model.generate_content(prompt)
+        text = (result.text or "").strip() if result else ""
+        if not text:
+            # fallback giữ summary cũ
+            return CompanionSummarizeResponse(summary=prev)
+        # Clamp độ dài
+        if len(text) > 800:
+            text = text[:800] + "..."
+        return CompanionSummarizeResponse(summary=text)
+    except Exception as e:  # noqa: BLE001
+        print(f"[companion/summarize] Gemini error: {e}")
+        return CompanionSummarizeResponse(summary=prev)
+
+
+@app.post("/companion/react", response_model=CompanionReactResponse)
+def companion_react(req: CompanionReactRequest) -> CompanionReactResponse:
+    if gemini_model is None:
+        return _rule_based_reaction(req.event_type, req.payload)
+
+    persona = (req.character_prompt or DEFAULT_COMPANION_PROMPT).strip()
+    context_block = _build_companion_context_block(req.context)
+
+    prompt = (
+        f"{persona}\n\n"
+        f"{context_block}"
+        f"Sự kiện vừa xảy ra: {req.event_type}\n"
+        f"Dữ liệu: {json.dumps(req.payload, ensure_ascii=False)}\n\n"
+        "Nhiệm vụ: Viết 1 câu phản ứng ngắn (tối đa 25 từ) để hiển thị popup trên avatar companion. "
+        "Thân thiện, có emoji. Không chào lại. Trả về đúng 1 dòng, không markdown."
+    )
+
+    try:
+        result = gemini_model.generate_content(prompt)
+        text = (result.text or "").strip() if result else ""
+        if not text:
+            return _rule_based_reaction(req.event_type, req.payload)
+        # Strip quotes nếu AI bọc
+        text = text.strip("\"' \n")
+        # Infer tone từ payload
+        tone = "happy"
+        if req.event_type == "streak_broken":
+            tone = "sad"
+        elif req.event_type == "test_completed":
+            band = req.payload.get("band")
+            if isinstance(band, (int, float)) and band >= 7:
+                tone = "proud"
+        return CompanionReactResponse(bubble=text, tone=tone)
+    except Exception as e:  # noqa: BLE001
+        print(f"[companion/react] Gemini error: {e}")
+        return _rule_based_reaction(req.event_type, req.payload)
