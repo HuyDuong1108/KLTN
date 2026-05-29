@@ -61,19 +61,19 @@
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_kzhqqzSO3Jec9rrGTq1K::word_Curriculum",
-    "card_json": "{\"card_id\": 1770979497919, \"state\": 1, \"step\": 0, \"stability\": 0.3080199456046412, \"difficulty\": 9.936097614162524, \"due\": \"2026-02-24T05:59:34.944407+00:00\", \"last_review\": \"2026-02-24T05:58:34.944407+00:00\"}"
+    "card_json": "{\"card_id\": 1770979497919, \"state\": 1, \"step\": 1, \"stability\": 0.30960661104104475, \"difficulty\": 9.933184234886232, \"due\": \"2026-04-21T17:34:18.720153+00:00\", \"last_review\": \"2026-04-21T17:24:18.720153+00:00\"}"
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_kzhqqzSO3Jec9rrGTq1K::word_Assessment",
-    "card_json": "{\"card_id\": 1770979500690, \"state\": 2, \"step\": null, \"stability\": 1.367408999145411, \"difficulty\": 4.287554146038724, \"due\": \"2026-03-04T05:58:36.668251+00:00\", \"last_review\": \"2026-02-24T05:58:36.668251+00:00\"}"
+    "card_json": "{\"card_id\": 1770979500690, \"state\": 2, \"step\": null, \"stability\": 1.367408999145411, \"difficulty\": 6.6029879215636225, \"due\": \"2026-04-29T17:24:20.429095+00:00\", \"last_review\": \"2026-04-21T17:24:20.429095+00:00\"}"
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_kzhqqzSO3Jec9rrGTq1K::word_Scholarship",
-    "card_json": "{\"card_id\": 1770979502708, \"state\": 2, \"step\": null, \"stability\": 7.293606670733225, \"difficulty\": 7.51191694108153, \"due\": \"2026-04-06T05:58:38.377928+00:00\", \"last_review\": \"2026-02-24T05:58:38.377928+00:00\"}"
+    "card_json": "{\"card_id\": 1770979502708, \"state\": 2, \"step\": null, \"stability\": 7.303290189882795, \"difficulty\": 6.5041208231047465, \"due\": \"2026-06-01T17:24:22.047602+00:00\", \"last_review\": \"2026-04-21T17:24:22.047602+00:00\"}"
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_kzhqqzSO3Jec9rrGTq1K::word_Pedagogy",
-    "card_json": "{\"card_id\": 1770979505245, \"state\": 1, \"step\": 1, \"stability\": 0.27370434576243735, \"difficulty\": 9.684686622199274, \"due\": \"2026-02-24T06:08:40.354828+00:00\", \"last_review\": \"2026-02-24T05:58:40.354828+00:00\"}"
+    "card_json": "{\"card_id\": 1770979505245, \"state\": 2, \"step\": null, \"stability\": 0.275607397882462, \"difficulty\": 9.682024653914945, \"due\": \"2026-04-23T17:24:23.580787+00:00\", \"last_review\": \"2026-04-21T17:24:23.580787+00:00\"}"
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_LDs0njhZsqLOTA6eowpI::word_lead a healthy lifestyle",
@@ -117,19 +117,19 @@
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_INbGJPR4BpszZgjxaFrh::word_artificial intelligence",
-    "card_json": "{\"card_id\": 1771912700722, \"state\": 1, \"step\": 0, \"stability\": 1.2931, \"difficulty\": 7.18049566620656, \"due\": \"2026-02-24T06:03:50.725347+00:00\", \"last_review\": \"2026-02-24T05:58:20.725347+00:00\"}"
+    "card_json": "{\"card_id\": 1771912700722, \"state\": 1, \"step\": 0, \"stability\": 0.9400236743302661, \"difficulty\": 9.463305263663901, \"due\": \"2026-04-21T16:59:49.435364+00:00\", \"last_review\": \"2026-04-21T16:58:49.435364+00:00\"}"
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_INbGJPR4BpszZgjxaFrh::word_cutting-edge technology",
-    "card_json": "{\"card_id\": 1771912702372, \"state\": 1, \"step\": 0, \"stability\": 0.212, \"difficulty\": 7.251617073434044, \"due\": \"2026-02-24T05:59:22.374177+00:00\", \"last_review\": \"2026-02-24T05:58:22.374177+00:00\"}"
+    "card_json": "{\"card_id\": 1771912702372, \"state\": 1, \"step\": 0, \"stability\": 0.212, \"difficulty\": 8.364078174774878, \"due\": \"2026-04-21T17:04:21.305290+00:00\", \"last_review\": \"2026-04-21T16:58:51.305290+00:00\"}"
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_INbGJPR4BpszZgjxaFrh::word_user-friendly",
-    "card_json": "{\"card_id\": 1771912703980, \"state\": 2, \"step\": null, \"stability\": 7.290156811894256, \"difficulty\": 7.022718337870689, \"due\": \"2026-04-06T05:58:23.987010+00:00\", \"last_review\": \"2026-02-24T05:58:23.987010+00:00\"}"
+    "card_json": "{\"card_id\": 1771912703980, \"state\": 2, \"step\": null, \"stability\": 7.299314969494098, \"difficulty\": 7.022718337870689, \"due\": \"2026-06-01T16:58:52.596874+00:00\", \"last_review\": \"2026-04-21T16:58:52.596874+00:00\"}"
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_INbGJPR4BpszZgjxaFrh::word_digital transformation",
-    "card_json": "{\"card_id\": 1771912705824, \"state\": 1, \"step\": 0, \"stability\": 0.212, \"difficulty\": 7.251617073434044, \"due\": \"2026-02-24T05:59:25.832204+00:00\", \"last_review\": \"2026-02-24T05:58:25.832204+00:00\"}"
+    "card_json": "{\"card_id\": 1771912705824, \"state\": 2, \"step\": null, \"stability\": 0.2181124338311048, \"difficulty\": 6.138698174622083, \"due\": \"2026-04-22T16:58:53.783939+00:00\", \"last_review\": \"2026-04-21T16:58:53.783939+00:00\"}"
   },
   {
     "cardId": "user_xlUZajA7AFbZdVfrA4RX0uLQOb93::set_LDs0njhZsqLOTA6eowpI::word_vitamin supplements",

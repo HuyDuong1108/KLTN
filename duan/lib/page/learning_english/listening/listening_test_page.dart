@@ -5,6 +5,9 @@ import 'listening_result_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
+import '../../../companion/companion_context.dart';
+import '../../../companion/companion_service.dart';
+import '../../../companion/companion_events.dart';
 
 class ListeningTestPage extends StatefulWidget {
   final String testId;
@@ -177,6 +180,22 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
             "reviewPath": docRef.path, // cực quan trọng
           });
     }
+
+    CompanionContextService.instance.setRecentActivity(
+      "Vừa hoàn thành bài Listening (band ${result['band']}, đúng ${result['correct']}/${(result['correct'] as num) + (result['incorrect'] as num)})",
+    );
+
+    // Fire proactive event — companion sẽ bật bubble khen/động viên
+    CompanionService.instance.fireEvent(
+      CompanionEventType.testCompleted,
+      payload: {
+        "skill": "Listening",
+        "band": result['band'],
+        "correct": result['correct'],
+        "incorrect": result['incorrect'],
+      },
+      force: true, // always fire khi user vừa làm xong test
+    );
 
     if (!mounted) return;
 

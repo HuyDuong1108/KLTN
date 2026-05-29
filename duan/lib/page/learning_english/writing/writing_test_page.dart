@@ -7,6 +7,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import '../../../companion/companion_context.dart';
+import '../../../companion/companion_service.dart';
+import '../../../companion/companion_events.dart';
 
 class WritingTestPage extends StatefulWidget {
   final String testId;
@@ -314,6 +317,19 @@ Only return raw JSON.
             "reviewPath": resultRef.path,
           });
     }
+
+    CompanionContextService.instance.setRecentActivity(
+      "Vừa hoàn thành bài Writing (band ${aiData['overallBand'] ?? '?'})",
+    );
+
+    CompanionService.instance.fireEvent(
+      CompanionEventType.testCompleted,
+      payload: {
+        "skill": "Writing",
+        "band": aiData['overallBand'],
+      },
+      force: true,
+    );
 
     setState(() {
       _isSubmitting = false;
