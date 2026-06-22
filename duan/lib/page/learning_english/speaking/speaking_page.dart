@@ -4,6 +4,7 @@ import 'ielts_speaking_test_page.dart';
 import 'ai_speaking_partner_page.dart';
 import 'ai_partner_review_page.dart';
 import 'pronunciation_practice_page.dart';
+import 'gemini_live_voice_page.dart';
 import 'speaking_review_page.dart';
 import 'speaking_user_guide_page.dart';
 import '../../../data/speaking_session_store.dart';
@@ -146,6 +147,22 @@ class _SpeakingPageState extends State<SpeakingPage>
             title: "Pronunciation Practice",
             subtitle: "Improve pronunciation & intonation",
             color: Colors.orange,
+          ),
+        ),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const GeminiLiveVoicePage(),
+              ),
+            );
+          },
+          child: _modeCard(
+            icon: Icons.graphic_eq,
+            title: "Live Voice Companion",
+            subtitle: "Real-time voice chat with Gemini",
+            color: Colors.deepPurple,
           ),
         ),
       ],
