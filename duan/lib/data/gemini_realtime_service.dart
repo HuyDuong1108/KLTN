@@ -24,6 +24,15 @@ class GeminiEvent {
   GeminiEvent(this.type, [this.data]);
 }
 
+/// A chunk of AI audio tagged with the turn it belongs to, so a listener
+/// can drop stale chunks that were already in flight when the user
+/// manually interrupted or the server reported an interruption.
+class GeminiAudioChunk {
+  final Uint8List bytes;
+  final int turn;
+  GeminiAudioChunk(this.bytes, this.turn);
+}
+
 class GeminiRealtimeService {
   GeminiRealtimeService({SpeakingSessionStore? sessionStore})
     : _sessionStore = sessionStore ?? SpeakingSessionStore.instance;
@@ -46,7 +55,21 @@ class GeminiRealtimeService {
   int _audioChunkCount = 0;
   Completer<void>? _setupCompleter;
 
+  // Turn tracking + mic gating: while the AI's audio is playing we stop
+  // forwarding mic audio to the server, so the phone's speaker output can't
+  // be picked back up by the mic and misread as the user interrupting
+  // (the self-interruption feedback loop). `_currentTurn` only advances on
+  // a *server-acknowledged* turn boundary (turnComplete/interrupted) — it
+  // identifies which in-flight server turn a chunk belongs to.
+  int _currentTurn = 0;
+  bool _micPaused = false;
+  // Set by a manual interrupt(); while true, further audio chunks belonging
+  // to the turn the user just cut off must not be allowed to re-mute the
+  // mic. Cleared once that turn formally closes server-side.
+  bool _micForceOpen = false;
+
   bool get isConnected => _channel != null;
+  int get currentTurn => _currentTurn;
 
   Future<void> initialize({
     required GeminiMode mode,
@@ -54,6 +77,9 @@ class GeminiRealtimeService {
   }) async {
     _chosenTopic = selectedTopic;
     _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    _currentTurn = 0;
+    _micPaused = false;
+    _micForceOpen = false;
     // Keep the key out of source; this app currently reads it from .env.
     // If you later add a backend token service, swap this lookup there.
     final apiKey = dotenv.env['API_KEY'];
@@ -101,9 +127,6 @@ class GeminiRealtimeService {
         'model': 'models/gemini-3.1-flash-live-preview',
         'generationConfig': {
           'responseModalities': ['AUDIO'],
-        },
-        'realtimeInputConfig': {
-          'automaticActivityDetection': {'disabled': true},
         },
         'systemInstruction': {
           'parts': [
@@ -180,6 +203,10 @@ class GeminiRealtimeService {
     _audioSub = stream.listen(
       (bytes) {
         if (bytes.isEmpty) return;
+        // Drop mic audio while the AI's own audio is playing, so the phone
+        // speaker's output can't be captured by the mic and misread by the
+        // server as the user interrupting.
+        if (_micPaused) return;
         _audioChunkCount += 1;
         final base64Chunk = base64Encode(bytes);
         final msg = {
@@ -218,6 +245,25 @@ class GeminiRealtimeService {
     } catch (_) {}
     _channel = null;
     _events.add(GeminiEvent('stopped'));
+  }
+
+  /// Called when local AI playback has actually finished (or its scheduled
+  /// deadline has passed) so the mic can resume streaming to the server.
+  void resumeMic() {
+    _micPaused = false;
+  }
+
+  /// User manually cut the AI off mid-turn. Re-opens the mic immediately
+  /// and keeps it open even if a few more chunks from the turn being
+  /// abandoned are still in flight from the server (guarded by
+  /// _micForceOpen, cleared once that turn formally closes). Note this
+  /// does NOT bump `_currentTurn` — that only advances on a server-
+  /// acknowledged turn boundary; callers should use `currentTurn` at the
+  /// moment of calling this to know which turn id is now stale.
+  void interrupt() {
+    _micForceOpen = true;
+    _micPaused = false;
+    _events.add(GeminiEvent('debug', 'Manual interrupt requested'));
   }
 
   Future<void> dispose() async {
@@ -275,10 +321,20 @@ class GeminiRealtimeService {
                   final inline = (part['inlineData'] as Map)['data'] as String?;
                   if (inline != null && inline.isNotEmpty) {
                     hadAudio = true;
+                    // Don't re-mute a mic the user just manually re-opened
+                    // with a trailing chunk from the turn they interrupted.
+                    if (!_micForceOpen) {
+                      _micPaused = true;
+                    }
+                    // Server audio is PCM16 little-endian at 24kHz; played back at
+                    // native rate, no resampling needed.
                     final bytes = base64Decode(inline);
-                    // Server audio is PCM16 little-endian at 24kHz
-                    final resampled = _upsample2x(bytes);
-                    _events.add(GeminiEvent('audio_chunk', resampled));
+                    _events.add(
+                      GeminiEvent(
+                        'audio_chunk',
+                        GeminiAudioChunk(bytes, _currentTurn),
+                      ),
+                    );
                   }
                 }
               }
@@ -286,9 +342,14 @@ class GeminiRealtimeService {
           }
         }
         if (serverContent['turnComplete'] == true) {
+          _currentTurn++;
+          _micForceOpen = false;
           _events.add(GeminiEvent('turn_complete'));
         }
         if (serverContent['interrupted'] == true) {
+          _currentTurn++;
+          _micForceOpen = false;
+          _micPaused = false;
           _events.add(GeminiEvent('interrupted'));
         }
       }
@@ -338,45 +399,6 @@ class GeminiRealtimeService {
     _channel?.sink.add(jsonEncode(clientMsg));
     _events.add(GeminiEvent('debug', 'Opening prompt sent'));
     _pendingOpeningText = null;
-  }
-
-  Uint8List _upsample2x(Uint8List input) {
-    final inSamples = input.lengthInBytes ~/ 2;
-    if (inSamples == 0) return Uint8List(0);
-    final inView = input.buffer.asByteData(
-      input.offsetInBytes,
-      input.lengthInBytes,
-    );
-    final out = ByteData(inSamples * 4);
-    for (int i = 0; i < inSamples; i++) {
-      final a = inView.getInt16(i * 2, Endian.little);
-      final b = (i + 1 < inSamples)
-          ? inView.getInt16((i + 1) * 2, Endian.little)
-          : a;
-      out.setInt16(i * 4, a, Endian.little);
-      out.setInt16(i * 4 + 2, (a + b) >> 1, Endian.little);
-    }
-    return out.buffer.asUint8List();
-  }
-
-  void sendActivityStart() {
-    if (_channel == null) return;
-    _channel!.sink.add(
-      jsonEncode({
-        'realtimeInput': {'activityStart': {}},
-      }),
-    );
-    _events.add(GeminiEvent('debug', 'activityStart sent'));
-  }
-
-  void sendActivityEnd() {
-    if (_channel == null) return;
-    _channel!.sink.add(
-      jsonEncode({
-        'realtimeInput': {'activityEnd': {}},
-      }),
-    );
-    _events.add(GeminiEvent('debug', 'activityEnd sent'));
   }
 
   Future<void> _persistSession() async {
