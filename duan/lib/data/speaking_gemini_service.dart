@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/word_error.dart';
 import '../models/pronunciation_feedback.dart';
+import 'azure_pronunciation_service.dart';
+import 'dictionary_api_service.dart';
 
 class GeminiAnalysisResult {
   final int overallScore;
@@ -77,7 +79,7 @@ class SpeakingGeminiService {
     }
 
     final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=$apiKey',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey',
     );
 
     final prompt = _buildPrompt(
@@ -109,7 +111,9 @@ class SpeakingGeminiService {
         );
       }
       if (response.statusCode != 200) {
-        throw Exception('Gemini API failed: ${response.statusCode}');
+        throw Exception(
+          'Gemini API failed: ${response.statusCode} — ${response.body}',
+        );
       }
 
       final data = jsonDecode(response.body);
@@ -125,6 +129,191 @@ class SpeakingGeminiService {
     }
   }
 
+  // ─── Azure-backed analysis ───────────────────────────────────────────────
+  // Replaces analyzeTranscript() for the Pronunciation Practice flow.
+  // Azure provides objective scores; Gemini's only job is coaching.
+  Future<GeminiAnalysisResult> analyzeWithAzureData({
+    required String targetSentence,
+    required AzurePronunciationResult azureResult,
+    required Map<String, WordDictEntry?> dictionaryData,
+    String category = 'Individual Sounds',
+  }) async {
+    final apiKey = dotenv.env['API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('API_KEY not found in .env file');
+    }
+
+    final url = Uri.parse(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey',
+    );
+
+    final prompt = _buildAzurePrompt(
+      targetSentence: targetSentence,
+      azureResult: azureResult,
+      dictionaryData: dictionaryData,
+      category: category,
+    );
+
+    try {
+      final response = await _postWithRetry(
+        url,
+        {'Content-Type': 'application/json'},
+        jsonEncode({
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt},
+              ],
+            },
+          ],
+        }),
+        timeout: _analyzeTimeout,
+      );
+
+      if (response.statusCode == 429) {
+        throw Exception(
+          'Gemini quota exceeded (429). Please wait a moment and try again.',
+        );
+      }
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Gemini API failed: ${response.statusCode} — ${response.body}',
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      String rawText = data['candidates'][0]['content']['parts'][0]['text'];
+      rawText = rawText.replaceAll('```json', '').replaceAll('```', '').trim();
+
+      final decoded = jsonDecode(rawText) as Map<String, dynamic>;
+
+      final wordErrorsRaw = decoded['wordErrors'] as List<dynamic>? ?? [];
+      final wordErrors = wordErrorsRaw
+          .map((e) => WordError.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final feedback = PronunciationFeedback.fromJson(decoded);
+
+      // Scores come from Azure — not from Gemini
+      final overallScore = azureResult.pronunciationScore.round().clamp(0, 100);
+      final bandScore = _azureScoreToBand(
+        azureResult.pronunciationScore,
+        azureResult.fluencyScore,
+      );
+
+      return GeminiAnalysisResult(
+        overallScore: overallScore,
+        bandScore: bandScore,
+        wordErrors: wordErrors,
+        feedback: feedback,
+      );
+    } catch (e) {
+      throw Exception('Failed to analyze with Azure data: $e');
+    }
+  }
+
+  double _azureScoreToBand(double pronunciationScore, double fluencyScore) {
+    // Weight: pronunciation 70%, fluency 30%
+    final combined = pronunciationScore * 0.7 + fluencyScore * 0.3;
+    if (combined >= 90) return 9.0;
+    if (combined >= 82) return 8.5;
+    if (combined >= 75) return 8.0;
+    if (combined >= 67) return 7.5;
+    if (combined >= 60) return 7.0;
+    if (combined >= 53) return 6.5;
+    if (combined >= 47) return 6.0;
+    if (combined >= 41) return 5.5;
+    if (combined >= 35) return 5.0;
+    if (combined >= 30) return 4.5;
+    return 4.0;
+  }
+
+  String _buildAzurePrompt({
+    required String targetSentence,
+    required AzurePronunciationResult azureResult,
+    required Map<String, WordDictEntry?> dictionaryData,
+    String category = 'Individual Sounds',
+  }) {
+    // Build word-level error section
+    final problematicWords = azureResult.words
+        .where((w) => w.hasError)
+        .toList();
+    problematicWords.sort((a, b) => a.accuracyScore.compareTo(b.accuracyScore));
+    final topErrors = problematicWords.take(5).toList();
+
+    final wordSection = StringBuffer();
+    for (var i = 0; i < topErrors.length; i++) {
+      final w = topErrors[i];
+      final dict = dictionaryData[w.word];
+      wordSection.writeln('${i + 1}. "${w.word}"');
+      wordSection.writeln(
+        '   Azure accuracy: ${w.accuracyScore.toStringAsFixed(0)}/100, '
+        'Error type: ${w.errorType}',
+      );
+      if (w.phonemes.isNotEmpty) {
+        final phonemeStr = w.phonemes
+            .map(
+              (p) =>
+                  '/${p.phoneme}/ ${p.accuracyScore.toStringAsFixed(0)}%',
+            )
+            .join(', ');
+        wordSection.writeln('   Phoneme scores: $phonemeStr');
+      }
+      if (dict?.ipa != null) {
+        wordSection.writeln('   Reference IPA: ${dict!.ipa}');
+      }
+    }
+
+    final focusVN = category == 'Individual Sounds'
+        ? 'âm đơn'
+        : category == 'Word Stress'
+        ? 'trọng âm'
+        : 'ngữ điệu';
+
+    return '''
+You are an IELTS pronunciation coach. Azure Cognitive Services has already assessed the learner's pronunciation with objective scores — do NOT change or re-assign overall scores. Your only job is to explain WHY errors occur and HOW to fix them.
+
+Practice category: $category
+Target sentence: "$targetSentence"
+What the learner said: "${azureResult.transcript}"
+
+AZURE ASSESSMENT SCORES (authoritative — do not override):
+- Overall Pronunciation Score: ${azureResult.pronunciationScore.toStringAsFixed(1)}/100
+- Accuracy Score: ${azureResult.accuracyScore.toStringAsFixed(1)}/100
+- Fluency Score: ${azureResult.fluencyScore.toStringAsFixed(1)}/100
+- Completeness Score: ${azureResult.completenessScore.toStringAsFixed(1)}/100
+
+${topErrors.isEmpty ? 'No significant word-level errors detected by Azure.' : 'WORDS WITH ERRORS (from Azure):\n$wordSection'}
+
+For each word above, explain WHY the error likely occurred (which phoneme is hard) and give a specific drill to fix it.
+
+Return ONLY valid JSON (no markdown):
+{
+  "wordErrors": [
+    {
+      "word": "the_word",
+      "position": 0,
+      "errorType": "Mispronunciation|Omission|Insertion|None",
+      "severity": 1-10,
+      "expectedIPA": "/correct IPA/",
+      "actualIPA": "/what learner likely produced/",
+      "tip": "specific 1-sentence coaching drill in English"
+    }
+  ],
+  "feedbackVN": "2-3 câu nhận xét tổng thể bằng tiếng Việt, tập trung vào $focusVN",
+  "feedbackEN": "2-3 sentence overall feedback in English focused on $category",
+  "tipsVN": ["Mẹo 1", "Mẹo 2", "Mẹo 3"],
+  "tipsEN": ["Tip 1", "Tip 2", "Tip 3"],
+  "nextStepsVN": "Gợi ý bước luyện tập tiếp theo bằng tiếng Việt",
+  "nextStepsEN": "Recommended next practice step in English",
+  "improvementFocus": ["errorType1", "errorType2"]
+}
+
+Return ONLY the JSON object, no additional text.
+''';
+  }
+
+  // ─── Original analyzeTranscript kept for backward compatibility ───────────
+
   Future<String> generateTargetSentence({
     required String category,
     String difficulty = 'intermediate',
@@ -135,7 +324,7 @@ class SpeakingGeminiService {
     }
 
     final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=$apiKey',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey',
     );
 
     // Each category gets a tailored generation prompt so the practice
@@ -223,7 +412,9 @@ Return ONLY a JSON object:
         );
       }
       if (response.statusCode != 200) {
-        throw Exception('Gemini API failed: ${response.statusCode}');
+        throw Exception(
+          'Gemini API failed: ${response.statusCode} — ${response.body}',
+        );
       }
 
       final data = jsonDecode(response.body);

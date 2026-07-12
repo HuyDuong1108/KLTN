@@ -4,7 +4,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../../data/ielts_gemini_service.dart';
 import '../../../data/ielts_speaking_store.dart';
-import '../../../data/google_cloud_speech_service.dart';
+import '../../../data/azure_pronunciation_service.dart';
 import '../../../models/ielts_speaking_session.dart';
 import '../../../data/ai_partner_gemini_service.dart'; // TurnScoreResult
 import 'ielts_speaking_result_page.dart';
@@ -37,7 +37,7 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
   // ── Services ────────────────────────────────────────────────
   final _gemini = IeltsGeminiService.instance;
   final _store = IeltsSpeakingStore.instance;
-  final _cloudSpeech = GoogleCloudSpeechService.instance;
+  final _azureService = AzurePronunciationService.instance;
   final FlutterTts _tts = FlutterTts();
 
   // ── Phase ───────────────────────────────────────────────────
@@ -112,7 +112,7 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
     _prepTimerRef?.cancel();
     _part2TimerRef?.cancel();
     _part3TimerRef?.cancel();
-    if (_isRecording) _cloudSpeech.cancelRecording();
+    if (_isRecording) _azureService.cancelRecording();
     _tts.stop();
     super.dispose();
   }
@@ -387,7 +387,7 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
     }
     _startingRecording = true;
     try {
-      await _cloudSpeech.startRecording();
+      await _azureService.startRecording();
       _recordingStartTime = DateTime.now();
       if (mounted) setState(() => _isRecording = true);
     } catch (e) {
@@ -416,14 +416,13 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
     _recordingStartTime = null;
 
     try {
-      final path = await _cloudSpeech.stopRecording();
+      final path = await _azureService.stopRecording();
       if (path == null || path.isEmpty) throw Exception('Empty recording');
 
-      final stt = await _cloudSpeech.recognizeSpeech(
-        audioFilePath: path,
-        languageCode: 'en-US',
+      final azureResult = await _azureService.assessPronunciation(
+        audioPath: path,
       );
-      final transcript = stt.transcript.trim();
+      final transcript = azureResult.transcript.trim();
 
       if (transcript.isEmpty) {
         setState(() {
@@ -438,7 +437,7 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
       }
 
       setState(() => _liveTranscript = transcript);
-      await _scoreTurn(transcript);
+      await _scoreTurn(transcript, azureData: azureResult);
     } catch (e) {
       setState(() {
         _isProcessing = false;
@@ -448,7 +447,7 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
     }
   }
 
-  Future<void> _scoreTurn(String transcript) async {
+  Future<void> _scoreTurn(String transcript, {AzurePronunciationResult? azureData}) async {
     final isP1 = _phase == _IeltsPhase.part1;
     final part = isP1 ? 1 : 3;
     final history = isP1 ? _part1Turns : _part3Turns;
@@ -467,6 +466,7 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
         question: question,
         part: part,
         history: history,
+        azureData: azureData,
       );
     } catch (_) {
       score = TurnScoreResult(
@@ -579,14 +579,13 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
     _recordingStartTime = null;
 
     try {
-      final path = await _cloudSpeech.stopRecording();
+      final path = await _azureService.stopRecording();
       if (path == null || path.isEmpty) throw Exception('Empty recording');
 
-      final stt = await _cloudSpeech.recognizeSpeech(
-        audioFilePath: path,
-        languageCode: 'en-US',
+      final azureResult = await _azureService.assessPronunciation(
+        audioPath: path,
       );
-      final transcript = stt.transcript.trim();
+      final transcript = azureResult.transcript.trim();
 
       if (transcript.isEmpty) {
         setState(() {
@@ -622,6 +621,7 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
           question: _cueCard?.topic ?? '',
           part: 2,
           history: [],
+          azureData: azureResult,
         );
       } catch (_) {
         score = TurnScoreResult(
@@ -695,7 +695,7 @@ class _IeltsSpeakingTestPageState extends State<IeltsSpeakingTestPage>
     _part2TimerRef?.cancel();
     _part3TimerRef?.cancel();
     if (_isRecording) {
-      await _cloudSpeech.cancelRecording();
+      await _azureService.cancelRecording();
       setState(() => _isRecording = false);
     }
     if (mounted) setState(() => _isProcessing = true);

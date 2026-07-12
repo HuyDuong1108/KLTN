@@ -3,17 +3,18 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/ielts_speaking_session.dart';
 import 'ai_partner_gemini_service.dart'; // reuse TurnScoreResult
+import 'azure_pronunciation_service.dart';
 
 class IeltsGeminiService {
   IeltsGeminiService._();
   static final instance = IeltsGeminiService._();
 
-  static const String _model = 'gemini-2.0-flash';
+  static const String _model = 'gemini-2.5-flash';
   static const Duration _timeout = Duration(seconds: 25);
 
   String get _apiKey => dotenv.env['API_KEY'] ?? '';
   String get _endpoint =>
-      'https://generativelanguage.googleapis.com/v1/models/$_model:generateContent?key=$_apiKey';
+      'https://generativelanguage.googleapis.com/v1beta/models/$_model:generateContent?key=$_apiKey';
 
   // ─────────────────────────────────────────────────────────────
   // 1. Generate 5 Part 1 personal questions
@@ -119,9 +120,21 @@ Return ONLY a JSON array of 4 strings, no explanation.
     required String question,
     required int part,
     required List<IeltsTurn> history,
+    AzurePronunciationResult? azureData,
   }) async {
     final historyCtx = _buildHistoryContext(history);
     final partDesc = _partDescription(part);
+
+    final azureSection = azureData != null
+        ? '''
+OBJECTIVE PRONUNCIATION DATA from Azure Cognitive Services (use these exact values for fluency and pronunciation — do NOT override):
+- Pronunciation Score: ${azureData.pronunciationScore.toStringAsFixed(1)}/100 → IELTS: ${AzurePronunciationResult.scoreToIeltsBand(azureData.pronunciationScore).toStringAsFixed(1)}
+- Fluency Score: ${azureData.fluencyScore.toStringAsFixed(1)}/100 → IELTS: ${AzurePronunciationResult.scoreToIeltsBand(azureData.fluencyScore).toStringAsFixed(1)}
+
+Set "fluency" = ${AzurePronunciationResult.scoreToIeltsBand(azureData.fluencyScore).toStringAsFixed(1)} and "pronunciation" = ${AzurePronunciationResult.scoreToIeltsBand(azureData.pronunciationScore).toStringAsFixed(1)} in your JSON.
+Score "lexical" and "grammar" yourself from the transcript.
+'''
+        : 'Score all 4 criteria yourself. Note: pronunciation estimated from transcript only.';
 
     final prompt =
         '''
@@ -133,15 +146,15 @@ Candidate said: "$transcript"
 Previous exchanges in this part:
 $historyCtx
 
-Score using IELTS Speaking Band Descriptors (1.0–9.0, half-band increments only: 5.0, 5.5, 6.0, etc.):
+$azureSection
 
-1. **Fluency & Coherence**: flow, hesitation frequency, self-correction, logical organisation, use of discourse markers
-2. **Lexical Resource**: vocabulary range, collocations, idiomatic expressions, precision, paraphrase ability
-3. **Grammatical Range & Accuracy**: variety of structures (simple/complex), error frequency and impact
-4. **Pronunciation**: clarity, intelligibility, word stress, sentence stress, intonation patterns
+Score using IELTS Speaking Band Descriptors (1.0–9.0, half-band increments only: 5.0, 5.5, 6.0, etc.):
+1. **Fluency & Coherence**: flow, hesitation frequency, self-correction, logical organisation
+2. **Lexical Resource**: vocabulary range, collocations, idiomatic expressions, precision
+3. **Grammatical Range & Accuracy**: variety of structures, error frequency and impact
+4. **Pronunciation**: use Azure value if provided above
 
 Be realistic — Band 5.0–6.5 is typical for intermediate learners.
-Note: pronunciation is estimated from transcript patterns (STT output).
 
 Return ONLY valid JSON:
 {
@@ -159,9 +172,33 @@ Return ONLY valid JSON:
     try {
       final raw = await _callGemini(prompt);
       final cleaned = _cleanJson(raw);
-      return TurnScoreResult.fromJson(
+      final base = TurnScoreResult.fromJson(
         jsonDecode(cleaned) as Map<String, dynamic>,
       );
+      if (azureData != null) {
+        final azurePron = AzurePronunciationResult.scoreToIeltsBand(
+          azureData.pronunciationScore,
+        );
+        final azureFluency = AzurePronunciationResult.scoreToIeltsBand(
+          azureData.fluencyScore,
+        );
+        final overall =
+            ((azureFluency + base.lexical + base.grammar + azurePron) / 4 * 2)
+                .round() /
+            2;
+        return TurnScoreResult(
+          fluency: azureFluency,
+          lexical: base.lexical,
+          grammar: base.grammar,
+          pronunciation: azurePron,
+          overallBand: overall,
+          feedbackVN: base.feedbackVN,
+          improvementTip: base.improvementTip,
+          strengths: base.strengths,
+          weaknesses: base.weaknesses,
+        );
+      }
+      return base;
     } catch (_) {
       return TurnScoreResult(
         fluency: 5.0,

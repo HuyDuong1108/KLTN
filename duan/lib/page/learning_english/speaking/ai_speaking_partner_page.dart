@@ -4,7 +4,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../../data/ai_partner_gemini_service.dart';
 import '../../../data/ai_partner_store.dart';
-import '../../../data/google_cloud_speech_service.dart';
+import '../../../data/azure_pronunciation_service.dart';
 import '../../../models/ai_partner_session.dart';
 import '../../../models/ai_partner_profile.dart';
 import '../../../models/conversation_turn.dart';
@@ -63,7 +63,7 @@ class _AISpeakingPartnerPageState extends State<AISpeakingPartnerPage>
   //  Services
   final _gemini = AiPartnerGeminiService.instance;
   final _store = AiPartnerStore.instance;
-  final _cloudSpeech = GoogleCloudSpeechService.instance;
+  final _azureService = AzurePronunciationService.instance;
   final FlutterTts _tts = FlutterTts();
 
   //  Phase
@@ -130,7 +130,7 @@ class _AISpeakingPartnerPageState extends State<AISpeakingPartnerPage>
     // it recreates its recorder internally, but calling dispose from a
     // page still risks a race condition if recording is in progress.
     if (_isRecording) {
-      _cloudSpeech.cancelRecording();
+      _azureService.cancelRecording();
     }
     _tts.stop();
     _scrollCtrl.dispose();
@@ -304,7 +304,7 @@ class _AISpeakingPartnerPageState extends State<AISpeakingPartnerPage>
       return;
     _startingRecording = true;
     try {
-      await _cloudSpeech.startRecording();
+      await _azureService.startRecording();
       _recordingStartTime = DateTime.now();
       if (mounted) setState(() => _isRecording = true);
     } catch (e) {
@@ -334,15 +334,14 @@ class _AISpeakingPartnerPageState extends State<AISpeakingPartnerPage>
     _recordingStartTime = null;
 
     try {
-      final path = await _cloudSpeech.stopRecording();
+      final path = await _azureService.stopRecording();
       if (path == null || path.isEmpty) throw Exception('Empty recording');
 
-      final stt = await _cloudSpeech.recognizeSpeech(
-        audioFilePath: path,
-        languageCode: 'en-US',
+      final azureResult = await _azureService.assessPronunciation(
+        audioPath: path,
       );
 
-      final transcript = stt.transcript.trim();
+      final transcript = azureResult.transcript.trim();
       if (transcript.isEmpty) {
         setState(() => _isProcessing = false);
         Fluttertoast.showToast(
@@ -363,6 +362,7 @@ class _AISpeakingPartnerPageState extends State<AISpeakingPartnerPage>
           aiQuestion: _currentAiQuestion,
           turnIndex: _turnCount,
           history: _completedTurns,
+          azureData: azureResult,
         ),
         _gemini.generateConversationResponse(
           topic: _selectedTopic,
